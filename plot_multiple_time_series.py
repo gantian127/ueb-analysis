@@ -5,7 +5,36 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 
-def get_var_point_data(file_path, var_name, x_index, y_index, xdim_name='x', ydim_name='y', var_dim_list=['time','y','x'], ravel=True):
+def get_cumulative(var_data, cumulative_scale):
+    var_data_acc = []
+
+    for index in range(0, var_data.size):
+        if index == 0:
+            var_data_acc.append(0)
+        else:
+            var_data_acc.append(var_data[index - 1] * cumulative_scale + var_data_acc[index - 1])
+
+    return var_data_acc
+
+
+def get_var_ave(file_path, var_name, axis_index=None):
+
+    # get root group
+    group = netCDF4.Dataset(file_path, 'r')
+
+    # get variable data
+    var = group.variables[var_name]
+    if axis_index is not None:
+        var_data_ave = var[:].mean(axis=axis_index)
+    else:
+        return 'Please provide the index for y or x axis in the array.'
+
+    group.close()
+
+    return var_data_ave
+
+
+def get_var_point_data(file_path, var_name, x_index, y_index, slice_obj=None, xdim_name='x', ydim_name='y', var_dim_list=['time','y','x'], ravel=True):
     """
     y_data = get_var_point_data(file_path='SWIT.nc', var_name='SWIT', x_index=19, y_index=29)
     y2_data = get_var_point_data(file_path='SWE.nc', var_name='SWE', x_index=19, y_index=29)
@@ -19,14 +48,15 @@ def get_var_point_data(file_path, var_name, x_index, y_index, xdim_name='x', ydi
     if ma.is_masked(var_data):
         var_data = var_data.data
 
-    slice_obj = []
-    for dim in var_dim_list:
-        if dim == xdim_name:
-            slice_obj.append(slice(x_index, x_index + 1, 1))
-        elif dim == ydim_name:
-            slice_obj.append(slice(y_index, y_index + 1, 1))
-        else:
-            slice_obj.append(slice(0, None, 1))
+    if slice_obj is None:
+        slice_obj = []
+        for dim in var_dim_list:
+            if dim == xdim_name:
+                slice_obj.append(slice(x_index, x_index + 1, 1))
+            elif dim == ydim_name:
+                slice_obj.append(slice(y_index, y_index + 1, 1))
+            else:
+                slice_obj.append(slice(0, None, 1))
 
     var_point_data = var_data[slice_obj]
 
@@ -65,7 +95,8 @@ def get_time_value(file_path, time_var, slice_obj=None, units=None, calendar=Non
     return time_value  # a list of datetime objects
 
 
-def plot_multiple_time_serise(x_data, y_data_list, figsize=(15,5),
+def plot_multiple_time_series(x_data, y_data_list,
+                              figsize=(15,5),
                               color_list=None,
                               linesytle_list=None,
                               month_interval=1,
@@ -75,7 +106,7 @@ def plot_multiple_time_serise(x_data, y_data_list, figsize=(15,5),
                               line_label_list=None,
                               save_as=None):
     """
-    plot_multiple_time_serise(x_data, [y_data,y2_data], color_list=None, time_format=None, month_interval=1,title=None, xlabel=None, ylabel=None)
+    plot_multiple_time_series(x_data, [y_data,y2_data], color_list=None, time_format=None, month_interval=1,title=None, xlabel=None, ylabel=None)
     """
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -92,7 +123,7 @@ def plot_multiple_time_serise(x_data, y_data_list, figsize=(15,5),
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m'))
     ax.set_xlabel(xlabel if xlabel else 'Time')
     ax.set_ylabel(ylabel if ylabel else 'Variable')
-    plt.title(title if title else 'Time serise plot')
+    plt.title(title if title else 'Time series plot')
 
     if legend:
         plt.legend(loc=legend_loc if legend_loc else 'best')
@@ -117,4 +148,4 @@ def plot_multiple_time_serise(x_data, y_data_list, figsize=(15,5),
 # x_data = get_time_value(file_path='SWIT.nc', time_var='time', units=None, calendar=None)
 # y_data = get_var_point_data(file_path='SWIT.nc', var_name='SWIT', x_index=19, y_index=29)
 # y2_data = get_var_point_data(file_path='SWE.nc', var_name='SWE', x_index=19, y_index=29)
-# plot_multiple_time_serise(x_data, [y_data,y2_data], color_list=None, month_interval=1, legend=True, title=None, xlabel=None, ylabel=None,save_as='File.png')
+# plot_multiple_time_series(x_data, [y_data,y2_data], color_list=None, month_interval=1, legend=True, title=None, xlabel=None, ylabel=None,save_as='File.png')

@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 
-# plot time serise (& cumulative) for a point
-def plot_time_serise_domain_average(file_path, variable, time, xaxis_index=None, yaxis_index=None,
+# plot time series (& cumulative) for a point
+def plot_time_series_domain_average(file_path, variable, time, xaxis_index=None, yaxis_index=None,
                      cumulative=True, cumulative_scale=1,
                      title=None, ylabel=None, xlabel=None, y2label=None,
                      ts_color='b', acc_ts_color='r', month_interval=1,
@@ -33,14 +33,14 @@ def plot_time_serise_domain_average(file_path, variable, time, xaxis_index=None,
 
     group.close()
 
-    # make normal time serise plot
+    # make normal time series plot
     fig, ax = plt.subplots(figsize=figsize)
     ax.plot(time_obj, var_data_mean, color=ts_color)
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=month_interval))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m'))
     ax.set_xlabel(xlabel if xlabel else 'Time')
     ax.set_ylabel(ylabel if ylabel else '{} in {}'.format(variable, var_unit))
-    plt.title(title if title else 'Time serise of {}'.format(variable))
+    plt.title(title if title else 'Time series of {}'.format(variable))
 
     # make cumulative plot
     if cumulative:
@@ -70,13 +70,13 @@ def plot_time_serise_domain_average(file_path, variable, time, xaxis_index=None,
 # os.chdir(r'C:\Users\jamy\Desktop\test')
 #
 # # plot domain average
-# a, b = plot_time_serise_domain_average('prcp0.nc', 'ogrid', time='time', xaxis_index=2, yaxis_index=1,
+# a, b = plot_time_series_domain_average('prcp0.nc', 'ogrid', time='time', xaxis_index=2, yaxis_index=1,
 #                         cumulative=True, cumulative_scale=3, title='Domain average of Precipitation',
 #                         ylabel='Precipitation (m/hr)', y2label='Cumulative of domain average Precipitation (m)')
 #
-# a1, b1 = plot_time_serise_domain_average('SWE.nc', 'SWE', time='time', xaxis_index=1, yaxis_index=0,
+# a1, b1 = plot_time_series_domain_average('SWE.nc', 'SWE', time='time', xaxis_index=1, yaxis_index=0,
 #                      cumulative=False, title='Domain average of SWE')
 #
-# a2, b2 = plot_time_serise_domain_average('SWIT.nc', 'SWIT', time='time', xaxis_index=1, yaxis_index=0,
+# a2, b2 = plot_time_series_domain_average('SWIT.nc', 'SWIT', time='time', xaxis_index=1, yaxis_index=0,
 #                         cumulative=True, cumulative_scale=6, title='Domain average of SWIT',
 #                         ylabel='SWIT (m/hr)', y2label='Cumulative of domain average SWIT (m)')
