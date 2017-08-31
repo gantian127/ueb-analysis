@@ -4,12 +4,14 @@ This is to make plots for NASA project output
 import os
 from plot_time_series_domain import plot_time_series_domain_average
 from plot_time_series import plot_time_series
+from plot_2d_grid import plot_2d_grid, plot_2d_animation
+import matplotlib.pyplot as plt
 
 
 tag = 'NASA'
 year = '1989'
 watershed = 'Animas'
-workDir = r'C:\Users\jamy\Desktop\Plot_{}_{}_{}'.format(watershed, year, tag)
+workDir = r'D:\3_NASA_Project\Model output and plots\Plot_{}_{}_{}'.format(watershed, year, tag)
 os.chdir(workDir)
 
 # point time series
@@ -93,3 +95,54 @@ plot_time_series_domain_average('SWIT.nc', 'SWIT', time='time',
                                 y2label='Cumulative of domain average SWIT (m)',
                                 save_as='domain_ave_swit_{}_{}_{}.png'.format(year, watershed, tag))
 
+
+# 2D plot and animation
+plot_2d_grid(x_name='x',
+             y_name='y',
+             var_name='ogrid',
+             time_name='time',
+             file_path='prcp0.nc',
+             var_shape=['time', 'x', 'y'],
+             time_index=1000,
+             slice_obj=None,
+             title=None,
+             xlabel=None,
+             ylabel=None,
+             figsize=None,
+             save_as=None)
+
+fig, ax = plt.subplots()
+plot_2d_grid(x_name='x',
+             y_name='y',
+             var_name='ogrid',
+             time_name='time',
+             file_path='prcp0.nc',
+             var_shape=['time', 'x', 'y'],
+             fig=fig,
+             ax=ax,
+             time_index=1000,
+             slice_obj=None,
+             title=None,
+             xlabel=None,
+             ylabel=None,
+             figsize=None,
+             save_as=None)
+
+
+plot_2d_animation(file_path='prcp0.nc', x_name='x', y_name='y',
+                  var_name='ogrid', var_shape=['time', 'y', 'x'],
+                  time_name='time', time_start_index=1000, time_end_index=1010,
+                  interval=300,
+                  title='animation', xlabel='x', ylabel='y',
+                  cmap='viridis',
+                  repeat=False,
+                  )
+
+plot_2d_animation(file_path='SWE.nc', x_name='x', y_name='y',
+                  var_name='SWE', var_shape=['y', 'x', 'time'],
+                  time_name='time', time_start_index=1060, time_end_index=1100,
+                  interval=300,
+                  title='animation', xlabel='x', ylabel='y',
+                  cmap='viridis',
+                  repeat=True,
+                  )
