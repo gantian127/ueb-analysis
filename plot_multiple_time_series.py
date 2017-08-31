@@ -90,13 +90,15 @@ def get_time_value(file_path, time_var, slice_obj=None, units=None, calendar=Non
 
     if time_units and time_calendar:
         time_value = [netCDF4.num2date(value, units=time_units, calendar=time_calendar) for value in
-                    time_data]
+                      time_data]
 
     return time_value  # a list of datetime objects
 
 
 def plot_multiple_time_series(x_data, y_data_list,
-                              figsize=(15,5),
+                              figsize=(15, 5),
+                              ax=None,
+                              fig=None,
                               color_list=None,
                               linesytle_list=None,
                               month_interval=1,
@@ -108,13 +110,14 @@ def plot_multiple_time_series(x_data, y_data_list,
     """
     plot_multiple_time_series(x_data, [y_data,y2_data], color_list=None, time_format=None, month_interval=1,title=None, xlabel=None, ylabel=None)
     """
+    if ax is None or fig is None:
+        fig, ax = plt.subplots(figsize=figsize)
 
-    fig, ax = plt.subplots(figsize=figsize)
     cmap = plt.cm.get_cmap('viridis')
     color_map = cmap(numpy.linspace(0, 1, len(y_data_list)))
 
     for i in range(0, len(y_data_list)):
-        plt.plot(x_data, y_data_list[i],
+        ax.plot(x_data, y_data_list[i],
                 color=color_list[i] if color_list else color_map[i],
                 label=line_label_list[i] if line_label_list else 'line {}'.format(i+1),
                 linestyle=linesytle_list[i] if linesytle_list else 'solid')
@@ -123,18 +126,21 @@ def plot_multiple_time_series(x_data, y_data_list,
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m'))
     ax.set_xlabel(xlabel if xlabel else 'Time')
     ax.set_ylabel(ylabel if ylabel else 'Variable')
-    plt.title(title if title else 'Time series plot')
+    ax.set_title(title if title else 'Time series plot')
 
     if legend:
-        plt.legend(loc=legend_loc if legend_loc else 'best')
+        ax.legend(loc=legend_loc if legend_loc else 'best')
 
     if save_as is not None:
         try:
             fig.savefig(save_as)
         except Exception as e:
-            return 'Warning: failed to save the plot as a file. Please check the file name.'
+            return 'Warning: failed to save the plot as a file.'
 
     return fig
+
+
+
 
 
 # # test the work

@@ -55,20 +55,28 @@ for point in [[28, 45, 'molas lake'],[19, 36, 'Cascade']]:
                      save_as='swit_{}_{}_{}_{}.png'.format(year, watershed, point[2], tag))
 
 # aggregation plot
+fig, ax = plt.subplots(2, 1,figsize=(15,10))
 plot_time_series('aggout.nc','SWIT', 'time',
                  x_index=0, shape=['x', 'time'],
+                 fig=fig, ax=ax[0],
                  cumulative_scale=3,
                  title='Aggregation output of rain plus melt in {} {} {}'.format(year, watershed, tag),
                  ylabel='SWIT(m)',
                  y2label='Cumulative of SWIT (m)',
-                 save_as='agg_swit_{}_{}_{}.png'.format(year, watershed, tag))
+                 # save_as='agg_swit_{}_{}_{}.png'.format(year, watershed, tag)
+                 )
 
 plot_time_series('aggout.nc','SWE', 'time',
                   x_index=0, shape=['x', 'time'],
+                  fig=fig,ax=ax[1],
                   cumulative=False,
                   title='Aggregation output of SWE in {} {} {}'.format(year, watershed, tag),
                   ylabel='SWE(m)',
-                  save_as='agg_swe_{}_{}_{}.png'.format(year, watershed, tag))
+                  # save_as='agg_swe_{}_{}_{}.png'.format(year, watershed, tag)
+                 )
+
+fig.savefig('aggregation.png')
+plt.tight_layout()
 
 # domain average
 plot_time_series_domain_average('prcp0.nc', 'ogrid', time='time',

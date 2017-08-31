@@ -3,6 +3,7 @@ import netCDF4
 import numpy
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.animation import FuncAnimation
 
 prcp = netCDF4.Dataset('prcp0.nc','r')
 ogrid = prcp.variables['ogrid']
@@ -39,7 +40,34 @@ plt.setp([a.get_yticklabels() for a in axarr[:, 1]], visible=False)  # setp() is
 # set property of artist object
 
 
+# make animation
+# get root group
+group = netCDF4.Dataset('prcp0.nc', 'r')
 
+# get variables
+x = group.variables['x'][:]
+y = group.variables['y'][:]
+var = group.variables['ogrid'][1000:1030, :, :]
+# time = get_time_var('file_path')
+#     time = group.variables[time_name][:]
+group.close()
+
+xx, yy = numpy.meshgrid(x, y)
+fig, ax = plt.subplots()
+plot = ax.pcolormesh(xx, yy, var[0, :, :], cmap='viridis', vmin=var.min(), vmax=var.max())
+ax.set_title('hi')
+fig.colorbar(plot)
+
+
+def update(frame):
+    ax.pcolormesh(xx, yy, var[frame, :, :], cmap='viridis', vmin=var[frame, :, :].min(), vmax=var[frame, :, :].max())
+    ax.set_title(str(frame))
+
+
+anim = FuncAnimation(
+    fig, update, frames=20, interval=1)
+
+plt.show()
 
 
 

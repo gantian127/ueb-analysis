@@ -4,11 +4,13 @@ import matplotlib.dates as mdates
 
 
 # plot time series (& cumulative) for a point
-def plot_time_series(file_path, variable, time, x_index=0, y_index=0, shape=['time','y','x'],
+def plot_time_series(file_path, variable, time,
+                     ax=None, fig=None,
+                     x_index=0, y_index=0, shape=['time','y','x'],
                      cumulative=True, cumulative_scale=1,
                      title=None, ylabel=None, xlabel=None, y2label=None,
                      ts_color='b', acc_ts_color='r', month_interval=1,
-                     figsize=(15, 5), save_as=None,**kwargs):
+                     figsize=(15, 5), save_as=None, **kwargs):
     # get root group
     group = netCDF4.Dataset(file_path, 'r')
 
@@ -17,7 +19,7 @@ def plot_time_series(file_path, variable, time, x_index=0, y_index=0, shape=['ti
     time_data = time[:]
     time_size = time_data.size
     time_units = time.units if getattr(time,'units', None) else 'hours since 2000-01-01 00:00:00 UTC'
-    time_calendar = time.calendar if getattr(time,'calendar',None) else 'standard'
+    time_calendar = time.calendar if getattr(time,'calendar', None) else 'standard'
     time_obj = [netCDF4.num2date(value, units=time_units, calendar=time_calendar) for value in
                 time_data]
 
@@ -37,13 +39,14 @@ def plot_time_series(file_path, variable, time, x_index=0, y_index=0, shape=['ti
     group.close()
 
     # make normal time series plot
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None or fig is None:
+        fig, ax = plt.subplots(figsize=figsize)
     ax.plot(time_obj, var_data, color=ts_color)
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=month_interval))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m'))
     ax.set_xlabel(xlabel if xlabel else 'Time')
     ax.set_ylabel(ylabel if ylabel else '{} in {}'.format(variable, var_unit))
-    plt.title(title if title else 'Time series of {}'.format(variable))
+    ax.set_title(title if title else 'Time series of {}'.format(variable))
 
     # make cumulative plot
     if cumulative:
@@ -64,8 +67,7 @@ def plot_time_series(file_path, variable, time, x_index=0, y_index=0, shape=['ti
         try:
             fig.savefig(save_as)
         except Exception as e:
-            print('wrong')
-            return 'Warning: failed to save the plot as a file. Please check the file name.'
+            return 'Warning: failed to save the plot as a file.'
 
     return fig, var
 
