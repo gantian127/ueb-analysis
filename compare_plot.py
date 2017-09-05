@@ -4,7 +4,7 @@ from plot_multiple_time_series import *
 tag = 'NASA'
 year = '1989'
 watershed = 'Animas'
-workDir = r'C:\Users\jamy\Desktop\Plot_{}_{}_{}'.format(watershed, year,tag)
+workDir = r'D:\3_NASA_Project\Model output and plots\Plot_{}_{}_{}'.format(watershed, year, tag)
 os.chdir(workDir)
 
 # compare domain average SWIT and SWE
@@ -18,8 +18,7 @@ plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_
                           title='Cumulative precipitation vs. Cumulative rain plus melt (domain average)',
                           xlabel='Time', ylabel='water input/output (m)',
                           line_label_list=['cumulative precipitation','cumulative rain plus melt','average swe'],
-                          save_as='compare_swit_prcp2.png',
-
+                          save_as='compare_swit_prcp2_domain_ave.png',
                           )
 
 
@@ -27,9 +26,10 @@ plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_
 time_data = get_time_value(file_path='SWIT.nc', time_var='time', units=None, calendar=None)
 swit_point = get_var_point_data(file_path='SWIT.nc', var_name='SWIT', x_index=19, y_index=36, var_dim_list=['y','x','time'])
 prcp_point = get_var_point_data(file_path='prcp0.nc', var_name='ogrid', x_index=19, y_index=36, var_dim_list=['time','y','x'])
+swe_point1 = get_var_point_data(file_path='SWE.nc',var_name='SWE', x_index=19, y_index=36, var_dim_list=['y','x','time'])
 swit_data_acc = get_cumulative(swit_point, cumulative_scale=3)
 prcp_data_acc = get_cumulative(prcp_point, cumulative_scale=3)
-plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_data_ave], color_list=None, month_interval=1, legend=True,
+plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_point1], color_list=None, month_interval=1, legend=True,
                           title='Cumulative precipitation vs. Cumulative rain plus melt (Cascade)',
                           xlabel='Time', ylabel='water input/output (m)',
                           line_label_list=['cumulative precipitation','cumulative rain plus melt','average swe'],
@@ -41,9 +41,10 @@ plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_
 time_data = get_time_value(file_path='SWIT.nc', time_var='time', units=None, calendar=None)
 swit_point = get_var_point_data(file_path='SWIT.nc', var_name='SWIT', x_index=28, y_index=45, var_dim_list=['y','x','time'])
 prcp_point = get_var_point_data(file_path='prcp0.nc', var_name='ogrid', x_index=28, y_index=45, var_dim_list=['time','y','x'])
+swe_point2 = get_var_point_data(file_path='SWE.nc',var_name='SWE', x_index=28, y_index=45, var_dim_list=['y','x','time'])
 swit_data_acc = get_cumulative(swit_point, cumulative_scale=3)
 prcp_data_acc = get_cumulative(prcp_point, cumulative_scale=3)
-plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_data_ave], color_list=None, month_interval=1, legend=True,
+plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_point2], color_list=None, month_interval=1, legend=True,
                           title='Cumulative precipitation vs. Cumulative rain plus melt (Molas Lake)',
                           xlabel='Time', ylabel='water input/output (m)',
                           line_label_list=['cumulative precipitation','cumulative rain plus melt','average swe'],
@@ -52,7 +53,6 @@ plot_multiple_time_series(time_data, [prcp_data_acc[2:2906], swit_data_acc, swe_
 
 # test subplots
 fig, ax = plt.subplots(2,1,figsize=(15,10))
-
 swit_data_ave = get_var_ave(file_path='SWIT.nc', var_name='SWIT', axis_index=(0, 1))
 time_data = get_time_value(file_path='SWIT.nc', time_var='time', units=None, calendar=None)
 swit_point = get_var_point_data(file_path='SWIT.nc', var_name='SWIT', x_index=19, y_index=36, var_dim_list=['y','x','time'])

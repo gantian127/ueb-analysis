@@ -146,11 +146,19 @@ plot_2d_animation(file_path='prcp0.nc', x_name='x', y_name='y',
                   repeat=False,
                   )
 
-plot_2d_animation(file_path='SWE.nc', x_name='x', y_name='y',
+anim = plot_2d_animation(file_path='SWE.nc', x_name='x', y_name='y',
                   var_name='SWE', var_shape=['y', 'x', 'time'],
                   time_name='time', time_start_index=1060, time_end_index=1100,
                   interval=300,
-                  title='animation', xlabel='x', ylabel='y',
+                  title='Animation of SWE at Animas 1989-1990', xlabel='x', ylabel='y',
                   cmap='viridis',
                   repeat=True,
+                  figsize=(10,10),
                   )
+
+# This is for displaying animation on Jupyternotebook
+# import matplotlib
+# from IPython.display import HTML
+# matplotlib.rcParams['animation.writer']='avconv'
+# HTML(anim.to_html5_video())
+# set the jupternote book output size: "Cell"-> Current output -> toggle scrolling
