@@ -9,7 +9,7 @@ import re
 import gzip
 
 # convert all the files
-data_dir = r'D:\3_NASA_Project\Obs Discharge_RTI\hisobs_natural_flow'
+data_dir = r'D:\3_NASA_Project\hisobs_natural_flow_RTI\hisobs_natural_flow'
 data_type = 'QME'   # if need to convert QINE data as ascii change this variable as 'QINE'
 allfiles = glob.glob(os.path.join(data_dir, '*{}.xml*'.format(data_type)))
 
