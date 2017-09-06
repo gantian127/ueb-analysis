@@ -72,6 +72,8 @@ def plot_2d_grid(x_name, y_name, var_name, file_path,
     # make 2D mesh plot
     if ax is None or fig is None:
         fig, ax = plt.subplots(figsize=figsize)
+
+    ax.set_aspect('equal', adjustable='box')
     plot = ax.pcolormesh(xx, yy, var_mesh, cmap=cmap, vmin=var_mesh.min(), vmax=var_mesh.max())
     fig.colorbar(plot)
 
@@ -145,6 +147,7 @@ def plot_2d_animation(file_path, x_name, y_name,
     # initiate 1st plot
     xx, yy = numpy.meshgrid(x, y)
     fig, ax = plt.subplots(figsize=figsize)
+    ax.set_aspect('equal', adjustable='box')
     plot = ax.pcolormesh(xx, yy, var[0, :, :], cmap=cmap, vmin=var.min(), vmax=var.max())
     ax.set_title(title if title else 'Animation of {}'.format(var_name))
     ax.set_xlabel(xlabel if xlabel else 'X coordinate')
