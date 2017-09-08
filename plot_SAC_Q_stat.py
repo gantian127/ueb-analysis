@@ -114,7 +114,7 @@ sac_discharge = sac_df.set_index('time').groupby(pd.TimeGrouper(freq='D'))['flow
 plot_obs_vs_sim(time=sac_discharge.index.values,
                 obs=obs_discharge.tolist(),
                 sim=sac_discharge.tolist(),
-                save_as='obs_sim_runoff_{}){}'.format(watershed,year))
+                save_as='obs_sim_runoff_{}_{}'.format(watershed,year))
 
 
 
