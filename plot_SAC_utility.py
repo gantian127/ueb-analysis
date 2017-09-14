@@ -109,7 +109,7 @@ def get_sacsma_time_and_discharge(discharge=None, surf_flow=None, sub_flow=None,
     return results
 
 
-def get_discharge_by_time_aggregation(time, data, freq='D'):
+def get_data_by_time_aggregation(time, data, freq='D'):
     df = pd.DataFrame(data={'time': time, 'data': data}, columns=['time', 'data'])
     data = df.set_index('time').groupby(pd.TimeGrouper(freq=freq))['data'].mean()
 
