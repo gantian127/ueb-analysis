@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
 import math
+from datetime import datetime, timedelta
 
 
 def plot_multiple_time_series(time, data_list, label_list,
@@ -45,6 +46,85 @@ def save_fig(fig, save_as=None):
             return '{} is created'.format(save_as)
         except Exception as e:
             return 'Warning: failed to save the plot as a file.'
+
+
+def get_sacsma_time_and_discharge(discharge=None, surf_flow=None, sub_flow=None,
+                          discharge_skip=91, surf_flow_skip=62, sub_flow_skip=62,
+                          unit_factor=1, unit_offset=0):
+    results = {}
+
+    if discharge:
+        # get discharge
+        raw_discharge = pd.read_csv(discharge, skiprows=discharge_skip, header=None, names=['raw'])
+        discharge = raw_discharge['raw'].str.split('\s+', expand=True)
+        discharge_flow = [float(x)*unit_factor+unit_offset for x in discharge[3].tolist()]
+
+        # get time
+        time_str = (discharge[1] + discharge[2]).tolist()
+        time_obj = []
+        for x in time_str:
+            if x[-2:] == '24':
+                x = x[:-2] + x[-2:].replace('24', '23')
+                time = datetime.strptime(x, '%d%m%y%H')
+                time += timedelta(hours=1)
+            else:
+                time = datetime.strptime(x, '%d%m%y%H')
+
+            time_obj.append(time)
+
+        results['discharge'] = discharge_flow
+        results['time'] = time_obj
+
+    elif surf_flow and sub_flow:
+
+        # get surf, sub, sum flow
+        raw_sub = pd.read_csv(sub_flow, skiprows=sub_flow_skip, header=None, names=['raw'])
+        raw_surf = pd.read_csv(surf_flow, skiprows=surf_flow_skip, header=None, names=['raw'])
+        sub = raw_sub['raw'].str.split('\s+', expand=True)
+        surf = raw_surf['raw'].str.split('\s+', expand=True)
+        sub_flow = [float(x)*unit_factor + unit_offset for x in sub[3].tolist()]
+        surf_flow = [float(x)*unit_factor + unit_offset for x in surf[3].tolist()]
+        sum_flow = [x + y for x, y in zip(sub_flow, surf_flow)]
+
+        # get time
+        time_str = (sub[1] + sub[2]).tolist()
+        time_obj = []
+        for x in time_str:
+            if x[-2:] == '24':
+                x = x[:-2] + x[-2:].replace('24', '23')
+                time = datetime.strptime(x, '%d%m%y%H')
+                time += timedelta(hours=1)
+            else:
+                time = datetime.strptime(x, '%d%m%y%H')
+
+            time_obj.append(time)
+
+        results['discharge'] = sum_flow
+        results['surf'] = surf_flow
+        results['sub'] = sub_flow
+        results['time'] = time_obj
+    else:
+        return 'Please provide valid input file'
+
+    return results
+
+
+def get_discharge_by_time_aggregation(time, data, freq='D'):
+    df = pd.DataFrame(data={'time': time, 'data': data}, columns=['time', 'data'])
+    data = df.set_index('time').groupby(pd.TimeGrouper(freq=freq))['data'].mean()
+
+    return data
+
+
+def get_rit_discharge(discharge, skiprows=3, start_date_obj=None, end_date_obj=None,
+                      unit_factor=0.0283168, unit_offset=0):
+    rti_discharge = pd.read_csv(discharge, skiprows=skiprows, header=None, names=['raw'])  # time column is used as index in dataframe
+    if start_date_obj and end_date_obj:
+        discharge = rti_discharge.ix[start_date_obj:end_date_obj]['raw'].apply(lambda x: x * unit_factor + unit_offset)
+    else:
+        discharge = rti_discharge['raw'].tolist()
+
+    return discharge
 
 
 def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
