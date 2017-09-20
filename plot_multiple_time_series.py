@@ -58,7 +58,7 @@ def get_var_point_data(file_path, var_name, x_index, y_index, slice_obj=None, xd
             else:
                 slice_obj.append(slice(0, None, 1))
 
-    var_point_data = var_data[slice_obj]
+    var_point_data = var_data[slice_obj].copy()
 
     if ravel:
         var_point_data = var_point_data.ravel()
@@ -93,6 +93,23 @@ def get_time_value(file_path, time_var, slice_obj=None, units=None, calendar=Non
                       time_data]
 
     return time_value  # a list of datetime objects
+
+
+def get_time_index(file_path, time_var, time_input, units=None, calendar=None):
+    """
+
+    :param file_path:
+    :param time_var:
+    :param time_input:
+    :param units:
+    :param calendar:
+    :return:
+    """
+    time_obj_list = get_time_value(file_path, time_var, units=units, calendar=calendar)
+
+    time_index = time_obj_list.index(time_input) if time_input in time_obj_list else None
+
+    return time_index
 
 
 def plot_multiple_time_series(x_data, y_data_list,

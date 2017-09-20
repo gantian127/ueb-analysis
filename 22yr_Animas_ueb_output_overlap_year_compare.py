@@ -20,15 +20,15 @@ from datetime import datetime
 from plot_multiple_time_series import *
 
 
-source_dir = r'C:\Users\jamy\Desktop\ueb_22yr_output_netcdf'
+source_dir = r'C:\Users\jamy\Desktop\22yr_Animas_UEB_sections_model_results\ueb_22yr_output_netcdf'
 if source_dir:
     os.chdir(source_dir)
 
 
 for last_year, next_year in [
-                             # (1988, 1993),
-                             # (1993, 1998),
-                             # (1998, 2001),
+                             (1988, 1993),
+                             (1993, 1998),
+                             (1998, 2001),
                              (2001, 2004)
                              ]:
     print last_year, next_year
@@ -40,6 +40,7 @@ for last_year, next_year in [
         # last year
         time_last_year = get_time_value(last_year_file, 'time')
         start = get_time_index(last_year_file, 'time', compare_time)
+        print start
         var_point_last_year = get_var_point_data(file_path=last_year_file, var_name=var, x_index=19, y_index=36,
                                                  var_dim_list=['y', 'x', 'time'])
         var_last_year = var_point_last_year[start:]
