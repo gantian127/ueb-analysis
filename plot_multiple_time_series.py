@@ -8,7 +8,7 @@ import matplotlib.dates as mdates
 def get_cumulative(var_data, cumulative_scale):
     var_data_acc = []
 
-    for index in range(0, var_data.size):
+    for index in range(0, len(var_data)):
         if index == 0:
             var_data_acc.append(0)
         else:
@@ -32,6 +32,17 @@ def get_var_ave(file_path, var_name, axis_index=None):
     group.close()
 
     return var_data_ave
+
+
+def get_aggout_var_data(file_path, var_name):
+    # get root group
+    group = netCDF4.Dataset(file_path, 'r')
+
+    # get variable data
+    var = group.variables[var_name]
+    var_data = numpy.squeeze(var[:])
+
+    return var_data
 
 
 def get_var_point_data(file_path, var_name, x_index, y_index, slice_obj=None, xdim_name='x', ydim_name='y', var_dim_list=['time','y','x'], ravel=True):
@@ -119,9 +130,12 @@ def plot_multiple_time_series(x_data, y_data_list,
                               color_list=None,
                               linesytle_list=None,
                               month_interval=1,
+                              time_format='%Y/%m',
                               title=None, xlabel=None, ylabel=None,
                               legend=False,
                               legend_loc=None,
+                              xlim=None,
+                              ylim=None,
                               line_label_list=None,
                               save_as=None):
     """
@@ -140,7 +154,14 @@ def plot_multiple_time_series(x_data, y_data_list,
                 linestyle=linesytle_list[i] if linesytle_list else 'solid')
 
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=month_interval))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m'))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter(time_format))
+    if xlim:
+        ax.set_xlim(xlim[0],xlim[1])
+
+    if ylim:
+        ax.set_ylim(ylim[0],ylim[1])
+
+
     ax.set_xlabel(xlabel if xlabel else 'Time')
     ax.set_ylabel(ylabel if ylabel else 'Variable')
     ax.set_title(title if title else 'Time series plot')
