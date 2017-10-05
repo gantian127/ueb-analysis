@@ -13,6 +13,8 @@ def plot_multiple_time_series(time, data_list, label_list,
                               title=None,
                               xlabel=None,
                               ylaebl=None,
+                              xlim=None,
+                              ylim=None,
                               interval=1,
                               format='%Y/%m'
                               ):
@@ -22,6 +24,12 @@ def plot_multiple_time_series(time, data_list, label_list,
 
     for i in range(0, len(data_list)):
         ax.plot(time, data_list[i], label=label_list[i])
+
+    if xlim == 2:
+        ax.set_xlim(xlim[0], xlim[1])
+
+    if ylim:
+        ax.set_ylim(ylim[0], ylim[1])
 
     return fig, ax
 
@@ -131,11 +139,16 @@ def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
                     ts_title='Time series of observation and simulation discharge',
                     ts_xlabel='Time',
                     ts_ylabel='Discharge(cms)',
+                    ts_xlim=None,
+                    ts_ylim=None,
                     title='Observation vs. simulation discharge',
                     xlabel='Observation(cms)',
                     ylabel='Simulation(cms)',
                     text_position=[0.1, 0.95],
-                    save_as=False):
+                    month_interval=1,
+                    format='%Y',
+                    save_as=False
+                    ):
 
     # calculate statistics
     stat_df = pd.DataFrame({'time': time,
@@ -171,10 +184,13 @@ def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
     plot_multiple_time_series(stat_df['time'],
                               [stat_df['observation'], stat_df['discharge']],
                               ['observation', 'simulation'],
-                              ax=ax[0], fig=fig
+                              ax=ax[0], fig=fig,
+                              xlim=ts_xlim,
+                              ylim=ts_ylim,
+
                               )
     refine_plot(ax[0], xlabel=ts_xlabel, ylabel=ts_ylabel, title=ts_title,
-                legend=True)
+                legend=True, interval=month_interval, format=format)
 
     # plot obs vs sac scatter plot
     ax[1].scatter(stat_df['observation'], stat_df['discharge'])
