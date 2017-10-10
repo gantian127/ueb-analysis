@@ -25,7 +25,7 @@ def plot_multiple_time_series(time, data_list, label_list,
     for i in range(0, len(data_list)):
         ax.plot(time, data_list[i], label=label_list[i])
 
-    if xlim == 2:
+    if xlim:
         ax.set_xlim(xlim[0], xlim[1])
 
     if ylim:
@@ -58,7 +58,8 @@ def save_fig(fig, save_as=None):
 
 def get_sacsma_time_and_discharge(discharge=None, surf_flow=None, sub_flow=None,
                           discharge_skip=91, surf_flow_skip=62, sub_flow_skip=62,
-                          unit_factor=1, unit_offset=0):
+                          unit_factor=1, unit_offset=0,
+                          time_hr_change='24', time_hr_change_factor=1):
     results = {}
 
     if discharge:
@@ -71,10 +72,10 @@ def get_sacsma_time_and_discharge(discharge=None, surf_flow=None, sub_flow=None,
         time_str = (discharge[1] + discharge[2]).tolist()
         time_obj = []
         for x in time_str:
-            if x[-2:] == '24':
+            if x[-2:] == time_hr_change:
                 x = x[:-2] + x[-2:].replace('24', '23')
                 time = datetime.strptime(x, '%d%m%y%H')
-                time += timedelta(hours=1)
+                time += timedelta(hours=time_hr_change_factor)
             else:
                 time = datetime.strptime(x, '%d%m%y%H')
 
@@ -121,18 +122,52 @@ def get_data_by_time_aggregation(time, data, freq='D'):
     df = pd.DataFrame(data={'time': time, 'data': data}, columns=['time', 'data'])
     data = df.set_index('time').groupby(pd.TimeGrouper(freq=freq))['data'].mean()
 
-    return data
+    return data.tolist(), data.index.values
 
 
 def get_rit_discharge(discharge, skiprows=3, start_date_obj=None, end_date_obj=None,
                       unit_factor=0.0283168, unit_offset=0):
     rti_discharge = pd.read_csv(discharge, skiprows=skiprows, header=None, names=['raw'])  # time column is used as index in dataframe
     if start_date_obj and end_date_obj:
-        discharge = rti_discharge.ix[start_date_obj:end_date_obj]['raw'].apply(lambda x: x * unit_factor + unit_offset)
+        start_date = datetime.strftime(start_date_obj, '%Y-%m-%d')
+        end_date = datetime.strftime(end_date_obj + timedelta(days=1), '%Y-%m-%d')
+        discharge = rti_discharge.ix[start_date:end_date]['raw'].apply(lambda x: x * unit_factor + unit_offset).tolist()
     else:
-        discharge = rti_discharge['raw'].tolist()
+        discharge = rti_discharge['raw'].apply(lambda x: x * unit_factor + unit_offset).tolist()
 
     return discharge
+
+
+def get_statistics(sim, obs):
+    # calculate statistics
+    stat_df = pd.DataFrame({'discharge': sim, 'observation': obs},
+                             columns=['discharge', 'observation']
+                           )
+
+    # rmse: sqrt(mean(sum((Qs-Qo)**2)))
+    stat_df['valDiff'] = stat_df['observation'] - stat_df['discharge']
+    valDiff_mean = stat_df['valDiff'].mean()
+    stat_df['valDiffSq'] = stat_df['valDiff'].apply(lambda x: x ** 2)
+    valDiffSq_mean = stat_df['valDiffSq'].mean()
+    rmse = math.sqrt(valDiffSq_mean)
+
+    # nse: 1 - sum ((Qs-Qo)**2) / sum((Qo-Qomean)**2)
+    stat_df['valDiffA'] = stat_df['valDiff'].apply(lambda x: abs(x))
+    valDiffA_mean = stat_df['valDiffA'].mean()
+    obs_mean = stat_df['observation'].mean()
+    valDiffSq_sum = stat_df['valDiffSq'].sum()
+
+    stat_df['valDiffMean'] = stat_df['observation'].apply(lambda x: x - obs_mean)
+    stat_df['valDiffSqmean'] = stat_df['valDiffMean'].apply(lambda x: x ** 2)
+    valDiffSqmean_sum = stat_df['valDiffSqmean'].sum()
+
+    nse = 1 - (valDiffSq_sum / valDiffSqmean_sum)
+    mae = valDiffA_mean
+
+    # correlation coefficient
+    r = stat_df[['observation', 'discharge']].corr()['observation'][1]
+
+    return {'rmse': rmse, 'nse': nse, 'mae': mae, 'r': r}
 
 
 def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
@@ -144,7 +179,9 @@ def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
                     title='Observation vs. simulation discharge',
                     xlabel='Observation(cms)',
                     ylabel='Simulation(cms)',
-                    text_position=[0.1, 0.95],
+                    xlim=None,
+                    ylim=None,
+                    text_position=[0.1, 0.90],
                     month_interval=1,
                     format='%Y',
                     save_as=False
@@ -155,29 +192,31 @@ def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
                             'discharge': sim,
                             'observation': obs},
                              columns=['time', 'discharge', 'observation'])
+    #
+    # # rmse: sqrt(mean(sum((Qs-Qo)**2)))
+    # stat_df['valDiff'] = stat_df['observation'] - stat_df['discharge']
+    # valDiff_mean = stat_df['valDiff'].mean()
+    # stat_df['valDiffSq'] = stat_df['valDiff'].apply(lambda x: x**2)
+    # valDiffSq_mean = stat_df['valDiffSq'].mean()
+    # rmse = math.sqrt(valDiffSq_mean)
+    #
+    # # nse: 1 - sum ((Qs-Qo)**2) / sum((Qo-Qomean)**2)
+    # stat_df['valDiffA'] = stat_df['valDiff'].apply(lambda x: abs(x))
+    # valDiffA_mean = stat_df['valDiffA'].mean()
+    # obs_mean = stat_df['observation'].mean()
+    # valDiffSq_sum = stat_df['valDiffSq'].sum()
+    #
+    # stat_df['valDiffMean'] = stat_df['observation'].apply(lambda x: x - obs_mean)
+    # stat_df['valDiffSqmean'] = stat_df['valDiffMean'].apply(lambda x: x**2)
+    # valDiffSqmean_sum = stat_df['valDiffSqmean'].sum()
+    #
+    # nse = 1 - (valDiffSq_sum/valDiffSqmean_sum)
+    # mae = valDiffA_mean
+    #
+    # # correlation coefficient
+    # r = stat_df[['observation', 'discharge']].corr()['observation'][1]
 
-    # rmse: sqrt(mean(sum((Qs-Qo)**2)))
-    stat_df['valDiff'] = stat_df['observation'] - stat_df['discharge']
-    valDiff_mean = stat_df['valDiff'].mean()
-    stat_df['valDiffSq'] = stat_df['valDiff'].apply(lambda x: x**2)
-    valDiffSq_mean = stat_df['valDiffSq'].mean()
-    rmse = math.sqrt(valDiffSq_mean)
-
-    # nse: 1 - sum ((Qs-Qo)**2) / sum((Qo-Qomean)**2)
-    stat_df['valDiffA'] = stat_df['valDiff'].apply(lambda x: abs(x))
-    valDiffA_mean = stat_df['valDiffA'].mean()
-    obs_mean = stat_df['observation'].mean()
-    valDiffSq_sum = stat_df['valDiffSq'].sum()
-
-    stat_df['valDiffMean'] = stat_df['observation'].apply(lambda x: x - obs_mean)
-    stat_df['valDiffSqmean'] = stat_df['valDiffMean'].apply(lambda x: x**2)
-    valDiffSqmean_sum = stat_df['valDiffSqmean'].sum()
-
-    nse = 1 - (valDiffSq_sum/valDiffSqmean_sum)
-    mae = valDiffA_mean
-
-    # correlation coefficient
-    r = stat_df[['observation', 'discharge']].corr()['observation'][1]
+    statistics = get_statistics(stat_df['discharge'], stat_df['observation'])
 
     # plot obs vs sac time series
     fig, ax = plt.subplots(2, 1, figsize=figsize)
@@ -187,7 +226,6 @@ def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
                               ax=ax[0], fig=fig,
                               xlim=ts_xlim,
                               ylim=ts_ylim,
-
                               )
     refine_plot(ax[0], xlabel=ts_xlabel, ylabel=ts_ylabel, title=ts_title,
                 legend=True, interval=month_interval, format=format)
@@ -199,10 +237,18 @@ def plot_obs_vs_sim(time, sim, obs,  figsize=(15,10),
     ax[1].plot([stat_df['observation'].min(), stat_df['observation'].max()],
                 [stat_df['observation'].min(), stat_df['observation'].max()],
                 linestyle = ':',
-                color='r')
+                color='r',
+                )
+    if xlim:
+        ax[1].set_xlim(xlim[0], xlim[1])
+
+    if ylim:
+        ax[1].set_ylim(ylim[0], ylim[1])
 
     plt.text(stat_df['observation'].max()*text_position[0], stat_df['discharge'].max()*text_position[1],
-             ' RMSE = {} \n NSE = {} \n R = {} \n MAE = {}'.format(rmse, nse, r, mae), fontsize=11, color='b')
+             ' RMSE = {} \n NSE = {} \n R = {} \n MAE = {}'.format(statistics['rmse'], statistics['nse'],
+                                                                   statistics['r'], statistics['mae']),
+             fontsize=11, color='b')
 
     plt.tight_layout()
 
