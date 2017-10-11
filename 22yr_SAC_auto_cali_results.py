@@ -26,9 +26,10 @@ os.mkdir('./analysis')
 obs_file = os.path.join('./hisobs', os.listdir('./hisobs/')[0])
 option_list = []
 stat_names = ['rmse', 'nse', 'r', 'mae']
-top_number = 3
+top_number = 5
 
 # get the statistics for all options
+print 'calculate statistics'
 for subdir in os.listdir(results_dir):
     sim_file = os.path.join(results_dir, subdir, subdir.split('_')[0]+'_discharge_outlet.ts')
     results = get_sacsma_time_and_discharge(discharge=sim_file,
@@ -42,6 +43,7 @@ for subdir in os.listdir(results_dir):
     result = [statistics[name] for name in stat_names]
     result.append(subdir)
     option_list.append(result)
+    print result
 
 with open('./analysis/all_results.csv', 'wb') as all_results:
     wr = csv.writer(all_results, dialect='excel')
@@ -62,6 +64,7 @@ with open('./analysis/ranks.csv', 'wb') as ranks:
             optimal_folders.append(option[-1])
 
 # make plot for the results
+print 'make plots'
 best_options = []
 for subdir in set(optimal_folders):
     sim_file = os.path.join(results_dir, subdir, subdir.split('_')[0]+'_discharge_outlet.ts')
