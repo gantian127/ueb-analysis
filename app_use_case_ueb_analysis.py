@@ -48,7 +48,7 @@ plot_multiple_time_series(time_data, [diff_prcp_ave],
                           title='Difference of the results (600m-1200m)',
                           xlabel='Time', ylabel='prcp (m/hr)',
                           line_label_list=['difference'],
-                          # save_as='compare_prcp_ave_app_jupyter.png',
+                          save_as='compare_prcp_ave_app_jupyter.png',
                           )
 
 # compare SWIT domain ave
@@ -69,8 +69,8 @@ plot_multiple_time_series(time_data,
                           fig=fig,
                           color_list=None,
                           month_interval=1, legend=True,
-                          title='Comparision of SWIT domain average',
-                          xlabel='Time', ylabel='rain plus metl (m/hr)',
+                          title='Comparision of rain plus melt for domain average',
+                          xlabel='Time', ylabel='rain plus melt (m/hr)',
                           line_label_list=['600m', '1200m',
                                            # 'difference'
                                            ],
@@ -80,10 +80,11 @@ plot_multiple_time_series(time_data,
 plot_multiple_time_series(time_data, [diff_swit_ave],
                           ax=ax[1],
                           fig=fig,
-                          title='Difference of the results (600m-1200m)',
+                          title='Difference of the results comparision ',
                           xlabel='Time', ylabel='rain plus melt (m/hr)',
-                          line_label_list=['difference'],
-                          # save_as='compare_prcp_ave_app_jupyter.png',
+                          line_label_list=['difference(600m-1200m)'],
+                          legend=True,
+                          save_as='compare_prcp_ave_app_jupyter.png',
                           )
 
 
@@ -101,19 +102,19 @@ plot_multiple_time_series(time_data, [jupyter_swe_data_ave, app_swe_data_ave],
                           fig=fig,
                           color_list=None,
                           month_interval=1, legend=True,
-                          title='Comparision of SWE domain average',
+                          title='Comparision of Snow water equivalent for domain average',
                           xlabel='Time', ylabel='SWE (m)',
                           line_label_list=['600m','1200m','difference'],
-                          save_as='compare_swe_ave_app_jupyter.png',
+                          # save_as='compare_swe_ave_app_jupyter.png',
                           )
 
 plot_multiple_time_series(time_data, [diff_swe_ave],
                           ax=ax[1],
                           fig=fig,
-                          title='Difference of the SWE results (600m-1200m)',
+                          title='Difference of the results comparision ',
                           xlabel='Time', ylabel='swe (m)',
-                          line_label_list=['difference'],
-                          # save_as='compare_prcp_ave_app_jupyter.png',
+                          line_label_list=['difference (600m-1200m)'],
+                          save_as='compare_prcp_ave_app_jupyter.png',
                           )
 
 # mass balance for domain average 600m
