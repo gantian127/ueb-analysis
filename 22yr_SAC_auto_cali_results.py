@@ -17,6 +17,7 @@ import os
 import csv
 from datetime import datetime
 import matplotlib.pyplot as plt
+import shutil
 
 from plot_SAC_utility import get_sacsma_time_and_discharge, get_statistics, get_rit_discharge,\
     get_data_by_time_aggregation, plot_obs_vs_sim
@@ -26,7 +27,7 @@ os.mkdir('./analysis')
 obs_file = os.path.join('./hisobs', os.listdir('./hisobs/')[0])
 option_list = []
 stat_names = ['rmse', 'nse', 'r', 'mae']
-top_number = 5
+top_number = 6
 
 # get the statistics for all options
 print 'calculate statistics'
@@ -58,7 +59,8 @@ with open('./analysis/ranks.csv', 'wb') as ranks:
     for i in range(0, len(stat_names)):
         wr.writerow(['{}'.format(stat_names[i])])
         a = option_list[1:]
-        a.sort(key=lambda pair: pair[i], reverse=True)
+
+        a.sort(key=lambda pair: pair[i], reverse=False if stat_names[i] in ['mae', 'rmse'] else True)
         wr.writerows(a[:top_number])
         for option in a[:top_number]:
             optimal_folders.append(option[-1])
@@ -80,13 +82,14 @@ for subdir in set(optimal_folders):
                     sim=sim,
                     obs=obs,
                     month_interval=12,
-                    format='%Y/%m',
+                    format='%Y',
                     ts_xlim=[datetime(time[0].astype('M8[D]').astype('O').year, 1, 1),
                              datetime(time[-1].astype('M8[D]').astype('O').year, 12, 31)],
                     xlim=[0, max(sim+obs)],
                     ylim=[0, max(sim+obs)],
                     save_as='./analysis/obs_sim_discharge_{}.png'.format(subdir))
     best_options.append(subdir)
+    shutil.copyfile(sim_file, os.path.join('./analysis', subdir+'_discharge_outlet.ts'))
 
 with open('./analysis/best_options.txt','w') as best_options_file:
     for item in best_options:
