@@ -13,18 +13,20 @@ import os
 
 def plot_multiple_X_Y(time, data_list,
                       label_list=None,
+                      linestyle_list=None,
                       fig=None, ax=None,
                       xlim=None,
                       ylim=None,
                       xticks=False,
                       figsize=None,
-                              ):
+                      ):
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
 
     for i in range(0, len(data_list)):
-        ax.plot(time, data_list[i], label=label_list[i] if label_list else str(i))
+        fmt = linestyle_list[i] if linestyle_list else '-'
+        ax.plot(time, data_list[i], fmt, label=label_list[i] if label_list else str(i))
 
     if xlim:
         ax.set_xlim(xlim[0], xlim[1])
@@ -352,6 +354,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                       [monthly_mean_multiyear.sim, monthly_mean_multiyear.obs],
                       ax=ax[0], fig=fig,
                       label_list=['sim', 'obs'],
+                      linestyle_list=['-o', '-o'],
                       xticks=True)
 
     refine_plot(ax[0], xlabel='month', ylabel='discharge(cms)',
@@ -362,7 +365,9 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
     plot_multiple_X_Y(monthly_mean_multiyear.index,
                       [monthly_mean_multiyear.bias],
                       ax=ax[1], fig=fig,
-                      label_list=['bias'])
+                      label_list=['bias'],
+                      linestyle_list=['-o'],
+                      xticks=True)
 
     refine_plot(ax[1], xlabel='month', ylabel='bias(cms)',
                 title='Monthly mean bias',
@@ -380,7 +385,8 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                       [monthly_mean_multiyear.sim_depth, monthly_mean_multiyear.obs_depth],
                       ax=ax[0], fig=fig,
                       xticks=True,
-                      label_list=['sim', 'obs'])
+                      label_list=['sim', 'obs'],
+                      linestyle_list=['-o', '-o'],)
 
     refine_plot(ax[0], xlabel='month', ylabel='discharge(mm)',
                 title='Monthly mean discharge (in depth)',
@@ -391,6 +397,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                       [monthly_mean_multiyear.bias_depth],
                       ax=ax[1], fig=fig,
                       label_list=['bias'],
+                      linestyle_list=['-o'],
                       xticks=True)
 
     refine_plot(ax[1], xlabel='month', ylabel='bias(mm)',
@@ -407,7 +414,9 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
     return 'monthly mean analysis done'
 
 
-def get_annual_mean_analysis(DF, watershed_area, format='%Y', interval=12, text_position=[0.1, 0.8], save_folder=None):
+def get_annual_mean_analysis(DF, watershed_area,
+                             text_position=[0.1, 0.8],
+                             save_folder=None):
     # annual mean in discharge
     annual_mean = DF.set_index('time').resample('A-SEP').mean()
     annual_mean['bias'] = annual_mean['sim'] - annual_mean['obs']
@@ -434,31 +443,31 @@ def get_annual_mean_analysis(DF, watershed_area, format='%Y', interval=12, text_
 
     # make plots
     fig, ax = plt.subplots(2, 1, figsize=(15, 10))
-    plot_multiple_X_Y(annual_mean.index,
+    plot_multiple_X_Y(annual_mean.index.year,
                       [annual_mean.sim, annual_mean.obs],
                       ax=ax[0], fig=fig,
                       label_list=['sim', 'obs'],
+                      linestyle_list=['-o', '-o'],
                       xticks=True)
 
     refine_plot(ax[0], xlabel='time', ylabel='discharge(cms)',
                 title='Annual mean discharge',
                 legend=True,
-                time_axis=True,
-                format=format,
-                interval=interval,
-                text_position=text_position)
+                time_axis=False
+                )
 
-    plot_multiple_X_Y(annual_mean.index,
+    plot_multiple_X_Y(annual_mean.index.year,
                       [annual_mean.bias],
                       ax=ax[1], fig=fig,
-                      label_list=['bias'])
+                      label_list=['bias'],
+                      linestyle_list=['-o'],
+                      xticks=True
+                      )
 
     refine_plot(ax[1], xlabel='time', ylabel='bias(cms)',
                 title='Annual mean bias',
                 legend=True,
-                time_axis=True,
-                format=format,
-                interval=interval,
+                time_axis=False,
                 text='mean bias = {} \npercent bias= {}'.format(bias_mean, percent_bias),
                 text_position=text_position
                 )
@@ -467,32 +476,31 @@ def get_annual_mean_analysis(DF, watershed_area, format='%Y', interval=12, text_
     save_fig(fig, path)
 
     fig, ax = plt.subplots(2, 1, figsize=(15, 10))
-    plot_multiple_X_Y(annual_mean.index,
+    plot_multiple_X_Y(annual_mean.index.year,
                       [annual_mean.sim_depth, annual_mean.obs_depth],
                       ax=ax[0], fig=fig,
                       xticks=True,
-                      label_list=['sim', 'obs'])
+                      label_list=['sim', 'obs'],
+                      linestyle_list=['-o', '-o']
+                      )
 
     refine_plot(ax[0], xlabel='time', ylabel='discharge(mm)',
                 title='Annual mean discharge (in depth)',
                 legend=True,
-                time_axis=True,
-                format=format,
-                interval=interval,
-                text_position=text_position)
+                time_axis=False,
+                )
 
-    plot_multiple_X_Y(annual_mean.index,
+    plot_multiple_X_Y(annual_mean.index.year,
                       [annual_mean.bias_depth],
                       ax=ax[1], fig=fig,
                       label_list=['bias'],
+                      linestyle_list=['-o'],
                       xticks=True)
 
     refine_plot(ax[1], xlabel='time', ylabel='bias(mm)',
                 title='Annual mean bias (in depth)',
                 legend=True,
-                time_axis=True,
-                format=format,
-                interval=interval,
+                time_axis=False,
                 text='mean bias = {} \npercent bias= {}'.format(bias_mean_depth, percent_bias_depth),
                 text_position=text_position
                 )
@@ -504,8 +512,7 @@ def get_annual_mean_analysis(DF, watershed_area, format='%Y', interval=12, text_
     return 'Annual mean analysis done'
 
 
-def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7,
-                              format='%Y', text_position=[0.1,0.8], interval=12):
+def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7, text_position=(0.1, 0.8)):
     DF['sim_vol'] = DF['sim'] * 24 * 60 * 60
     DF['obs_vol'] = DF['obs'] * 24 * 60 * 60
     monthly_vol = DF.set_index('time').resample('M')['sim_vol', 'obs_vol'].sum()
@@ -528,33 +535,33 @@ def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7,
 
     # make plots
     fig, ax = plt.subplots(2, 1, figsize=(15, 10))
-    plot_multiple_X_Y(monthly_vol_subset_sum.index,
+    plot_multiple_X_Y(monthly_vol_subset_sum.index.year,
                       [monthly_vol_subset_sum.sim_vol, monthly_vol_subset_sum.obs_vol],
                       ax=ax[0], fig=fig,
+                      linestyle_list=['-o', '-o'],
                       label_list=['sim', 'obs'],
-                      xticks=False)
+                      xticks=True)
 
     refine_plot(ax[0], xlabel='time', ylabel='volume(m^3)',
                 title='April-July Volume',
                 legend=True,
-                time_axis=True,
-                text_position=text_position,
-                format=format,
-                interval=interval)
+                time_axis=False,
+                )
 
-    plot_multiple_X_Y(monthly_vol_subset_sum.index,
+    plot_multiple_X_Y(monthly_vol_subset_sum.index.year,
                       [monthly_vol_subset_sum.error],
                       ax=ax[1], fig=fig,
-                      label_list=['error'])
+                      linestyle_list=['-o'],
+                      label_list=['error'],
+                      xticks=True)
 
     refine_plot(ax[1], xlabel='time', ylabel='error(m^3)',
                 title='April-July volume error',
                 legend=True,
-                time_axis=True,
+                time_axis=False,
                 text='volume error = {} \npercent error= {}'.format(volume_error, percent_error),
                 text_position=text_position,
-                format=format,
-                interval=interval)
+                )
 
     path = os.path.join(save_folder, 'volume_error.png') if save_folder else 'volume_error.png'
     save_fig(fig, path)
