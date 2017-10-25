@@ -318,6 +318,9 @@ def plot_obs_vs_sim(
 
 
 def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_position=[0.1, 0.8]):
+    """
+    tested monthly mean multiyear in excel with DF.csv and monthly mean.csv
+    """
     # monthly_mean
     monthly_mean = DF.groupby([DF.time.dt.month, DF.time.dt.year]).mean()
     monthly_mean_multiyear = monthly_mean.groupby(level=0).mean()
@@ -417,6 +420,10 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
 def get_annual_mean_analysis(DF, watershed_area,
                              text_position=[0.1, 0.8],
                              save_folder=None):
+
+    """
+    Tested with excel using DF.csv
+    """
     # annual mean in discharge
     annual_mean = DF.set_index('time').resample('A-SEP').mean()
     annual_mean['bias'] = annual_mean['sim'] - annual_mean['obs']
@@ -513,6 +520,9 @@ def get_annual_mean_analysis(DF, watershed_area,
 
 
 def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7, text_position=(0.1, 0.8)):
+    """
+    tested the volume error in excel with monthly mean.csv
+    """
     DF['sim_vol'] = DF['sim'] * 24 * 60 * 60
     DF['obs_vol'] = DF['obs'] * 24 * 60 * 60
     monthly_vol = DF.set_index('time').resample('M')['sim_vol', 'obs_vol'].sum()
