@@ -51,7 +51,12 @@ def refine_plot(ax, xlabel='', ylabel='', title='', interval=1, format='%Y/%m', 
         ax.legend(loc='best')
 
     if text and text_position:
-        plt.text(text_position[0], text_position[1], text)
+        x1, x2 = ax.get_xlim()
+        x = x1 + text_position[0]*(x2-x1)
+        y1, y2 = ax.get_ylim()
+        y = y1 + text_position[1]*(y2-y1)
+
+        ax.text(x, y, text)
 
 
 def save_fig(fig, save_as=None):
@@ -156,7 +161,8 @@ def get_rit_discharge(discharge, skiprows=3, start_date_obj=None, end_date_obj=N
 
 
 # Functions used for 22yr model comparision and data analysis
-def get_sim_obs_dataframe(sim_file, obs_file, start_time='', end_time='', sim_skip=91, obs_skip=3, obs_unit=0.0283168):
+def get_sim_obs_dataframe(sim_file, obs_file, start_time='', end_time='', sim_skip=91, obs_skip=3, obs_unit=0.0283168,
+                          time_change_ori=('24', '25'), time_change_new=('23', '1'), save_folder=None):
     """
      This will create the daily sim vs obs data frame for discharge comparision
     """
@@ -165,7 +171,8 @@ def get_sim_obs_dataframe(sim_file, obs_file, start_time='', end_time='', sim_sk
     sim_data = raw_sim['raw'].str.split('\s+', expand=True)
     sim_data.rename(columns={3: 'sim'}, inplace=True)
     sim_data['sim'] = sim_data['sim'].astype(float)
-    sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace('25', '1'))
+    for i in range(0, len(time_change_ori)):
+        sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace(time_change_ori[i], time_change_new[i]))
     sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
     sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
     sim_data.drop([0, 1, 2], axis=1, inplace=True)
@@ -183,6 +190,9 @@ def get_sim_obs_dataframe(sim_file, obs_file, start_time='', end_time='', sim_sk
 
     # create dataframe
     DF = pd.concat([sim, obs], axis=1, join_axes=[sim.index]).reset_index()
+
+    path = os.path.join(save_folder, 'DF.csv') if save_folder else './DF.csv'
+    DF.to_csv(path)
 
     return DF
 
@@ -290,13 +300,14 @@ def plot_obs_vs_sim(
     fig, ax = plot_multiple_X_Y(DF['time'], [DF['bias']],
                                 xlim=ts_xlim,
                                 figsize=figsize[1],
-                                label_list=['sim-obs'])
+                                label_list=['sim-obs (mean={}'.format(DF['bias'].mean())])
     refine_plot(ax, xlabel='time', ylabel='discharge(cms)',
                 title='Daily mean bias',
                 time_axis=True,
                 interval=month_interval,
                 format=format,
                 legend=True,
+
                 )
     if save_folder:
         save_fig(fig, save_as=os.path.join(save_folder,'time_series_bias.png'))
@@ -304,7 +315,7 @@ def plot_obs_vs_sim(
     return fig, ax
 
 
-def get_monthly_mean_analysis(DF, watershed_area, save_folder=None):
+def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_position=[0.1, 0.8]):
     # monthly_mean
     monthly_mean = DF.groupby([DF.time.dt.month, DF.time.dt.year]).mean()
     monthly_mean_multiyear = monthly_mean.groupby(level=0).mean()
@@ -312,7 +323,8 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None):
     bias_mean = monthly_mean_multiyear['bias'].mean()
     percent_bias = sum(monthly_mean_multiyear['bias']) / sum(monthly_mean_multiyear['obs']) * 100
 
-    monthly_mean_multiyear['factor'] = [calendar.monthrange(2010, x)[1] * 24 * 3600 * (watershed_area ** -1) * 100 for x
+    # monthly bias in depth
+    monthly_mean_multiyear['factor'] = [calendar.monthrange(2010, x)[1] * 24 * 3600 * (watershed_area ** -1) * 1000 for x
                                         in range(1, 13)]  # depth in mm
     monthly_mean_multiyear['sim_depth'] = monthly_mean_multiyear.sim * monthly_mean_multiyear.factor
     monthly_mean_multiyear['obs_depth'] = monthly_mean_multiyear.obs * monthly_mean_multiyear.factor
@@ -331,9 +343,10 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None):
             '\npercent bias depth = {}'.format(bias_mean, percent_bias, bias_mean_depth, percent_bias_depth)
         )
 
-    # make plots
-    import matplotlib.pyplot as plt
+    path = os.path.join(save_folder,'monthly_mean.csv') if save_folder else './monthly_mean.csv'
+    monthly_mean.to_csv(path)
 
+    # make plots
     fig, ax = plt.subplots(2, 1, figsize=(15, 10))
     plot_multiple_X_Y(monthly_mean_multiyear.index,
                       [monthly_mean_multiyear.sim, monthly_mean_multiyear.obs],
@@ -356,7 +369,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None):
                 legend=True,
                 time_axis=False,
                 text='mean bias = {} \npercent bias= {}'.format(bias_mean, percent_bias),
-                text_position=[1, -6]
+                text_position=text_position
                 )
 
     path = os.path.join(save_folder, 'monthly_mean_bias.png') if save_folder else 'monthly_mean_bias.png'
@@ -385,10 +398,165 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None):
                 legend=True,
                 time_axis=False,
                 text='mean bias = {} \npercent bias= {}'.format(bias_mean_depth, percent_bias_depth),
-                text_position=[1, -1]
+                text_position=text_position
                 )
 
     path = os.path.join(save_folder, 'monthly_mean_bias_depth.png') if save_folder else 'monthly_mean_bias_depth.png'
     save_fig(fig, path)
 
     return 'monthly mean analysis done'
+
+
+def get_annual_mean_analysis(DF, watershed_area, format='%Y', interval=12, text_position=[0.1, 0.8], save_folder=None):
+    # annual mean in discharge
+    annual_mean = DF.set_index('time').resample('A-SEP').mean()
+    annual_mean['bias'] = annual_mean['sim'] - annual_mean['obs']
+    bias_mean = annual_mean['bias'].mean()
+    percent_bias = sum(annual_mean['bias']) / sum(annual_mean['obs']) * 100
+
+    # annual mean in depth
+    annual_mean['sim_depth'] = annual_mean['sim'] * 24 * 3600 * 365 * 1000 * (watershed_area ** -1)
+    annual_mean['obs_depth'] = annual_mean['obs'] * 24 * 3600 * 365 * 1000 * (watershed_area ** -1)
+    annual_mean['bias_depth'] = annual_mean['sim_depth'] - annual_mean['obs_depth']
+    bias_mean_depth = annual_mean['bias_depth'].mean()
+    percent_bias_depth = sum(annual_mean['bias_depth']) / sum(annual_mean['obs_depth']) * 100
+
+    # write results
+    path = os.path.join(save_folder, 'annual_mean.csv') if save_folder else './annual_mean.csv'
+    annual_mean.to_csv(path)
+    with open(path, 'a') as my_file:
+        my_file.write(
+            '\nbias mean = {}'
+            '\npercent bias = {}'
+            '\nbias mean depth = {}'
+            '\npercent bias depth = {}'.format(bias_mean, percent_bias, bias_mean_depth, percent_bias_depth)
+        )
+
+    # make plots
+    fig, ax = plt.subplots(2, 1, figsize=(15, 10))
+    plot_multiple_X_Y(annual_mean.index,
+                      [annual_mean.sim, annual_mean.obs],
+                      ax=ax[0], fig=fig,
+                      label_list=['sim', 'obs'],
+                      xticks=True)
+
+    refine_plot(ax[0], xlabel='time', ylabel='discharge(cms)',
+                title='Annual mean discharge',
+                legend=True,
+                time_axis=True,
+                format=format,
+                interval=interval,
+                text_position=text_position)
+
+    plot_multiple_X_Y(annual_mean.index,
+                      [annual_mean.bias],
+                      ax=ax[1], fig=fig,
+                      label_list=['bias'])
+
+    refine_plot(ax[1], xlabel='time', ylabel='bias(cms)',
+                title='Annual mean bias',
+                legend=True,
+                time_axis=True,
+                format=format,
+                interval=interval,
+                text='mean bias = {} \npercent bias= {}'.format(bias_mean, percent_bias),
+                text_position=text_position
+                )
+
+    path = os.path.join(save_folder, 'annual_mean_bias.png') if save_folder else 'annual_mean_bias.png'
+    save_fig(fig, path)
+
+    fig, ax = plt.subplots(2, 1, figsize=(15, 10))
+    plot_multiple_X_Y(annual_mean.index,
+                      [annual_mean.sim_depth, annual_mean.obs_depth],
+                      ax=ax[0], fig=fig,
+                      xticks=True,
+                      label_list=['sim', 'obs'])
+
+    refine_plot(ax[0], xlabel='time', ylabel='discharge(mm)',
+                title='Annual mean discharge (in depth)',
+                legend=True,
+                time_axis=True,
+                format=format,
+                interval=interval,
+                text_position=text_position)
+
+    plot_multiple_X_Y(annual_mean.index,
+                      [annual_mean.bias_depth],
+                      ax=ax[1], fig=fig,
+                      label_list=['bias'],
+                      xticks=True)
+
+    refine_plot(ax[1], xlabel='time', ylabel='bias(mm)',
+                title='Annual mean bias (in depth)',
+                legend=True,
+                time_axis=True,
+                format=format,
+                interval=interval,
+                text='mean bias = {} \npercent bias= {}'.format(bias_mean_depth, percent_bias_depth),
+                text_position=text_position
+                )
+
+    path = os.path.join(save_folder,
+                        'annual_mean_bias_depth.png') if save_folder else 'annual_mean_bias_depth.png'
+    save_fig(fig, path)
+
+    return 'Annual mean analysis done'
+
+
+def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7,
+                              format='%Y', text_position=[0.1,0.8], interval=12):
+    DF['sim_vol'] = DF['sim'] * 24 * 60 * 60
+    DF['obs_vol'] = DF['obs'] * 24 * 60 * 60
+    monthly_vol = DF.set_index('time').resample('M')['sim_vol', 'obs_vol'].sum()
+    monthly_vol_subset = monthly_vol[(monthly_vol.index.month >= start_month) & (monthly_vol.index.month <= end_month)]
+    monthly_vol_subset_sum = monthly_vol_subset.resample('A').sum()
+    monthly_vol_subset_sum['error'] = monthly_vol_subset_sum['sim_vol'] - monthly_vol_subset_sum['obs_vol']
+    volume_error = monthly_vol_subset_sum['error'].mean()
+    percent_error = sum(monthly_vol_subset_sum['error']) / sum(monthly_vol_subset_sum['obs_vol']) * 100
+
+    # write volume error
+    path = os.path.join(save_folder, 'monthly_volume.csv') if save_folder else './monthly_volume.csv'
+    monthly_vol.to_csv(path)
+    path = os.path.join(save_folder, 'volume_err.csv') if save_folder else './volume_err.csv'
+    monthly_vol_subset_sum.to_csv(path)
+    with open(path, 'a') as my_file:
+        my_file.write(
+            '\n volume error = {}'
+            '\n percent error = {}'.format(volume_error, percent_error)
+        )
+
+    # make plots
+    fig, ax = plt.subplots(2, 1, figsize=(15, 10))
+    plot_multiple_X_Y(monthly_vol_subset_sum.index,
+                      [monthly_vol_subset_sum.sim_vol, monthly_vol_subset_sum.obs_vol],
+                      ax=ax[0], fig=fig,
+                      label_list=['sim', 'obs'],
+                      xticks=False)
+
+    refine_plot(ax[0], xlabel='time', ylabel='volume(m^3)',
+                title='April-July Volume',
+                legend=True,
+                time_axis=True,
+                text_position=text_position,
+                format=format,
+                interval=interval)
+
+    plot_multiple_X_Y(monthly_vol_subset_sum.index,
+                      [monthly_vol_subset_sum.error],
+                      ax=ax[1], fig=fig,
+                      label_list=['error'])
+
+    refine_plot(ax[1], xlabel='time', ylabel='error(m^3)',
+                title='April-July volume error',
+                legend=True,
+                time_axis=True,
+                text='volume error = {} \npercent error= {}'.format(volume_error, percent_error),
+                text_position=text_position,
+                format=format,
+                interval=interval)
+
+    path = os.path.join(save_folder, 'volume_error.png') if save_folder else 'volume_error.png'
+    save_fig(fig, path)
+
+    return 'Volume error analysis is done.'
