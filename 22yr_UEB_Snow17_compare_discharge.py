@@ -1,16 +1,22 @@
 """
-This is used to compare the discharge results from different model results.
-First step is to calculate the discharge related statistics for each simulation results
-Second step is to plot all the simulation and observation daily discharge on one plot
-and plot the error for all simulation on one plot
+This is used to compare the discharge results from UEB+SAC and Snow17+SAC.
+
+1 separate results:
+  create folders include the discharge related statistics and graphs for each simulation results
+2 combined results:
+  compare all the simulation and observation daily discharge on one plot and the error for all simulation on one plot
 """
 
 import os
 
 from plot_SAC_utility import *
 
-sim_file_list = ['DRGC2_discharge_outlet_22yr.ts', 'DRGC2_discharge_outlet_62824_22yr_cali.ts',
-                 'DRGC2_discharge_outlet_31567.ts']
+sim_file_list = [
+                 'DRGC2_discharge_outlet_22yr.ts',
+                 # 'DRGC2_discharge_outlet_62824_22yr_cali.ts',
+                 # 'DRGC2_discharge_outlet_31567.ts',
+                 'DRGC2_discharge_outlet_chpc_para.ts'
+                 ]
 obs_file = 'DRGC2H_F.QME'
 watershed_area = 1818920000  # m^2  1818.92 km^2
 start_time = '' #'2005-10-01'
@@ -101,4 +107,4 @@ if len(sim_file_list) > 1:
     path = os.path.join(compare_dir, 'daily_discharge_comparison.png') if compare_dir else 'daily_discharge_comparison.png'
     save_fig(fig, save_as=path)
 
-    print 'All analysis is finished ! Please check the results'
+print 'All analysis is finished ! Please check the results'
