@@ -67,20 +67,12 @@ prcp_22yr['var_acc'] = get_cumulative(prcp_22yr['var_ave'], cumulative_scale=3)
 
 
 # get 22yr aggout snow data
-ori_dir = os.getcwd()
-os.chdir(snow_dir)
-time_data = get_time_value(file_path='aggout22yr.nc', time_var='time')
-swit_data_aggout = get_aggout_var_data(file_path='aggout22yr.nc', var_name='SWIT')
-swe_data_aggout = get_aggout_var_data(file_path='aggout22yr.nc', var_name ='SWE')
+path = os.path.join(snow_dir,'aggout22yr.nc')
+time_data = get_time_value(file_path=path, time_var='time')
+swit_data_aggout = get_aggout_var_data(file_path=path, var_name='SWIT')
+swe_data_aggout = get_aggout_var_data(file_path=path, var_name='SWE')
 swit_data_aggout_acc = get_cumulative(swit_data_aggout, cumulative_scale=3)
 
-
-# get 22yr snow station data
-# time_data = get_time_value(file_path='SWIT22yr.nc', time_var='time', units=None, calendar=None)
-# swit_data_ave = get_var_ave(file_path='SWIT22yr.nc', var_name='SWIT', axis_index=(0, 1))
-# swit_data_acc = get_cumulative(swit_data_ave, cumulative_scale=3)
-# swe_data_ave = get_var_ave(file_path='SWE22yr.nc', var_name='SWE', axis_index=(0,1))
-# os.chdir(ori_dir)
 
 # Write data to file #################################################
 prcp = pd.DataFrame(data=prcp_22yr)
@@ -105,8 +97,8 @@ DF.to_csv(os.path.join(results_dir, 'all_data.csv'))
 
 # Make plots ########################################################
 xlim = [datetime(DF.time[0].year, 1, 1), datetime(DF.time.iloc[-1].year, 12, 31)]
-time_format = '%Y/%m'
-month_interval = 1
+time_format = '%Y'
+month_interval = 12
 
 
 # Domain average
