@@ -144,7 +144,7 @@ def plot_multiple_time_series(x_data, y_data_list,
     if ax is None or fig is None:
         fig, ax = plt.subplots(figsize=figsize)
 
-    cmap = plt.cm.get_cmap('viridis')
+    cmap = plt.cm.get_cmap('winter') #plt.cm.get_cmap('viridis')
     color_map = cmap(numpy.linspace(0, 1, len(y_data_list)))
 
     for i in range(0, len(y_data_list)):
