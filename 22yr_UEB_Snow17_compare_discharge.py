@@ -13,14 +13,15 @@ from plot_SAC_utility import *
 
 sim_file_list = [
                  'DRGC2_discharge_outlet_22yr.ts',
-                 # 'DRGC2_discharge_outlet_62824_22yr_cali.ts',
+                 'DRGC2_discharge_outlet_62824_22yr_cali.ts',
                  # 'DRGC2_discharge_outlet_31567.ts',
-                 'DRGC2_discharge_outlet_chpc_para.ts'
+                 # 'DRGC2_discharge_outlet_chpc_para.ts' # this is useing the parameter from 62824 to rerun 22yr sac model
                  ]
+
 obs_file = 'DRGC2H_F.QME'
 watershed_area = 1818920000  # m^2  1818.92 km^2
-start_time = '' #'2005-10-01'
-end_time = '' #'2006-9-30'
+start_time = '1989-10-01' #'2005-10-01'
+end_time = '2010-6-30' #'2006-9-30'
 
 DF_list = []
 plt.ioff()
@@ -54,7 +55,7 @@ for sim_file in sim_file_list:
     get_annual_mean_analysis(DF, watershed_area, save_folder=results_dir)
 
     # April - July Volume error
-    get_volume_error_analysis(DF, save_folder=results_dir, start_month=4, end_month=7)
+    get_volume_error_analysis(DF, watershed_area, save_folder=results_dir, start_month=4, end_month=7)
 
 
 # Daily discharge comparison for all the simulation results
@@ -89,6 +90,7 @@ if len(sim_file_list) > 1:
                 time_axis=True)
 
     difference = [(sim_data.iloc[:, i] - obs_data).tolist() for i in range(0, len(sim_data.columns))]
+    difference_mean = [ sum(x)/len(x) for x in difference]
     plot_multiple_X_Y(time_data, difference,
                       ax=ax[1], fig=fig,
                       label_list=sim_data.columns.tolist(),

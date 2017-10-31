@@ -240,6 +240,8 @@ def plot_obs_vs_sim(
                     ts_ylabel='Discharge(cms)',
                     ts_xlim=None,
                     ts_ylim=None,
+                    ts_line_label=['simulation','observation'],
+                    ts_line_style=['-', '-'],
                     title='Observation vs. simulation discharge',
                     xlabel='Observation(cms)',
                     ylabel='Simulation(cms)',
@@ -263,12 +265,13 @@ def plot_obs_vs_sim(
     # plot obs vs sac time series
     fig, ax = plt.subplots(2, 1, figsize=figsize[0])
     plot_multiple_X_Y(DF['time'],
-                              [DF['obs'], DF['sim']],
-                              ['observation', 'simulation'],
-                              ax=ax[0], fig=fig,
-                              xlim=ts_xlim,
-                              ylim=ts_ylim,
-                              )
+                      [DF['sim'], DF['obs']],
+                      label_list=ts_line_label,
+                      linestyle_list=ts_line_style,
+                      ax=ax[0], fig=fig,
+                      xlim=ts_xlim,
+                      ylim=ts_ylim,
+                       )
     refine_plot(ax[0], xlabel=ts_xlabel, ylabel=ts_ylabel, title=ts_title,
                 legend=True, interval=month_interval, format=format)
 
@@ -519,7 +522,7 @@ def get_annual_mean_analysis(DF, watershed_area,
     return 'Annual mean analysis done'
 
 
-def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7, text_position=(0.1, 0.8)):
+def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=4, end_month=7, text_position=(0.1, 0.8)):
     """
     tested the volume error in excel with monthly mean.csv
     """
@@ -532,16 +535,26 @@ def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7, 
     volume_error = monthly_vol_subset_sum['error'].mean()
     percent_error = sum(monthly_vol_subset_sum['error']) / sum(monthly_vol_subset_sum['obs_vol']) * 100
 
+    monthly_vol_subset_sum['sim_depth'] = monthly_vol_subset_sum['sim_vol'] / watershed_area * 1000
+    monthly_vol_subset_sum['obs_depth'] = monthly_vol_subset_sum['obs_vol'] / watershed_area * 1000
+    monthly_vol_subset_sum['error_depth'] = monthly_vol_subset_sum['sim_depth'] - monthly_vol_subset_sum['obs_depth']
+    volume_error_depth = monthly_vol_subset_sum['error_depth'].mean()
+    percent_error_depth = sum(monthly_vol_subset_sum['error_depth']) / sum(monthly_vol_subset_sum['obs_depth']) * 100
+
     # write volume error
     path = os.path.join(save_folder, 'monthly_volume.csv') if save_folder else './monthly_volume.csv'
     monthly_vol.to_csv(path)
     path = os.path.join(save_folder, 'volume_err.csv') if save_folder else './volume_err.csv'
     monthly_vol_subset_sum.to_csv(path)
+
     with open(path, 'a') as my_file:
         my_file.write(
             '\n volume error = {}'
-            '\n percent error = {}'.format(volume_error, percent_error)
+            '\n percent error = {} '
+            '\n volume error depth = {} '
+            '\n percent error depth = {} '.format(volume_error, percent_error, volume_error_depth, percent_error_depth)
         )
+
 
     # make plots
     fig, ax = plt.subplots(2, 1, figsize=(15, 10))
@@ -574,6 +587,39 @@ def get_volume_error_analysis(DF, save_folder=None, start_month=4, end_month=7, 
                 )
 
     path = os.path.join(save_folder, 'volume_error.png') if save_folder else 'volume_error.png'
+    save_fig(fig, path)
+
+    # make plots
+    fig, ax = plt.subplots(2, 1, figsize=(15, 10))
+    plot_multiple_X_Y(monthly_vol_subset_sum.index.year,
+                      [monthly_vol_subset_sum.sim_depth, monthly_vol_subset_sum.obs_depth],
+                      ax=ax[0], fig=fig,
+                      linestyle_list=['-o', '-o'],
+                      label_list=['sim', 'obs'],
+                      xticks=True)
+
+    refine_plot(ax[0], xlabel='time', ylabel='depth(mm)',
+                title='April-July Volume (in depth)',
+                legend=True,
+                time_axis=False,
+                )
+
+    plot_multiple_X_Y(monthly_vol_subset_sum.index.year,
+                      [monthly_vol_subset_sum.error_depth],
+                      ax=ax[1], fig=fig,
+                      linestyle_list=['-o'],
+                      label_list=['error'],
+                      xticks=True)
+
+    refine_plot(ax[1], xlabel='time', ylabel='error in depth(mm)',
+                title='April-July volume error (in depth)',
+                legend=True,
+                time_axis=False,
+                text='volume error = {} \npercent error= {}'.format(volume_error_depth, percent_error_depth),
+                text_position=text_position,
+                )
+
+    path = os.path.join(save_folder, 'volume_error_depth.png') if save_folder else 'volume_error_depth.png'
     save_fig(fig, path)
 
     return 'Volume error analysis is done.'
