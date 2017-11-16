@@ -23,8 +23,12 @@ from plot_SAC_utility import get_sacsma_time_and_discharge, get_statistics, get_
     get_data_by_time_aggregation, plot_obs_vs_sim
 
 results_dir = './output/test'
+
+if os.path.isdir('./analysis'):
+    shutil.rmtree('./analysis')
 os.mkdir('./analysis')
-obs_file = os.path.join('./hisobs', os.listdir('./hisobs/')[0])
+
+obs_file = os.path.join('./data/hisobs', os.listdir('./data/hisobs/')[0])
 option_list = []
 stat_names = ['rmse', 'nse', 'r', 'mae']
 top_number = 6
@@ -87,7 +91,8 @@ for subdir in set(optimal_folders):
                              datetime(time[-1].astype('M8[D]').astype('O').year, 12, 31)],
                     xlim=[0, max(sim+obs)],
                     ylim=[0, max(sim+obs)],
-                    save_as='./analysis/obs_sim_discharge_{}.png'.format(subdir))
+                    save_name='obs_sim_discharge_{}.png'.format(subdir),
+                    save_folder='./analysis')
     best_options.append(subdir)
     shutil.copyfile(sim_file, os.path.join('./analysis', subdir+'_discharge_outlet.ts'))
 

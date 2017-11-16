@@ -163,7 +163,7 @@ def get_rit_discharge(discharge, skiprows=3, start_date_obj=None, end_date_obj=N
 
 
 # Functions used for 22yr model comparision and data analysis
-def get_sim_obs_dataframe(sim_file, obs_file, start_time='', end_time='', sim_skip=91, obs_skip=3, obs_unit=0.0283168,
+def get_sim_obs_dataframe(sim_file, obs_file=None, start_time='', end_time='', sim_skip=91, obs_skip=3, obs_unit=0.0283168,
                           time_change_ori=('24', '25'), time_change_new=('23', '1'), save_folder=None):
     """
      This will create the daily sim vs obs data frame for discharge comparision
@@ -228,7 +228,11 @@ def get_statistics(sim, obs):
     # correlation coefficient
     r = stat_df[['observation', 'discharge']].corr()['observation'][1]
 
-    return {'rmse': rmse, 'nse': nse, 'mae': mae, 'r': r}
+    # bias: Qs-Qo
+    stat_df['bias'] = stat_df['discharge'] - stat_df['observation']
+    bias = stat_df['bias'].mean()
+
+    return {'rmse': rmse, 'nse': nse, 'mae': mae, 'r': r, 'bias': bias}
 
 
 def plot_obs_vs_sim(
@@ -240,7 +244,7 @@ def plot_obs_vs_sim(
                     ts_ylabel='Discharge(cms)',
                     ts_xlim=None,
                     ts_ylim=None,
-                    ts_line_label=['simulation','observation'],
+                    ts_line_label=['observation','simulation',],
                     ts_line_style=['-', '-'],
                     title='Observation vs. simulation discharge',
                     xlabel='Observation(cms)',
@@ -250,7 +254,9 @@ def plot_obs_vs_sim(
                     text_position=[0.1, 0.80],
                     month_interval=1,
                     format='%Y',
+                    reverse=False,
                     save_folder=None,
+                    save_name='',
                     ):
 
     # calculate statistics
@@ -264,8 +270,14 @@ def plot_obs_vs_sim(
 
     # plot obs vs sac time series
     fig, ax = plt.subplots(2, 1, figsize=figsize[0])
+    Y = [DF['obs'], DF['sim']]
+    if reverse:
+        Y.reverse()
+        ts_line_label.reverse()
+        ts_line_style.reverse()
+
     plot_multiple_X_Y(DF['time'],
-                      [DF['sim'], DF['obs']],
+                      Y,
                       label_list=ts_line_label,
                       linestyle_list=ts_line_style,
                       ax=ax[0], fig=fig,
@@ -291,14 +303,16 @@ def plot_obs_vs_sim(
         ax[1].set_ylim(ylim[0], ylim[1])
 
     plt.text(DF['obs'].max()*text_position[0], DF['sim'].max()*text_position[1],
-             ' RMSE = {} \n NSE = {} \n R = {} \n MAE = {}'.format(statistics['rmse'], statistics['nse'],
-                                                                   statistics['r'], statistics['mae']),
+             ' RMSE = {} \n NSE = {} \n R = {} \n Bias = {}cms'.format(statistics['rmse'], statistics['nse'],
+                                                                   statistics['r'], round(statistics['bias'],3)),
              fontsize=11, color='b')
 
     plt.tight_layout()
 
-    if save_folder:
-        save_fig(fig, save_as=os.path.join(save_folder,'time_serise.png'))
+    if save_folder or save_name:
+        save_fig(fig, save_as=os.path.join(save_folder if save_folder else os.getcwd(),
+                                           save_name if save_name else 'time_series.png')
+                 )
 
     # plot daily bias
     DF['bias'] = DF['sim'] - DF['obs']
@@ -314,8 +328,10 @@ def plot_obs_vs_sim(
                 legend=True,
 
                 )
-    if save_folder:
-        save_fig(fig, save_as=os.path.join(save_folder,'time_series_bias.png'))
+    if save_folder or save_name:
+        save_fig(fig, save_as=os.path.join(save_folder if save_folder else os.getcwd(),
+                                           'bias_{}'.format(save_name) if save_name else 'time_series_bias.png')
+                 )
 
     return fig, ax
 
@@ -379,7 +395,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                 title='Monthly mean bias',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(bias_mean, percent_bias),
+                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean,2), round(percent_bias,2)),
                 text_position=text_position
                 )
 
@@ -410,7 +426,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                 title='Monthly mean bias (in depth)',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(bias_mean_depth, percent_bias_depth),
+                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean_depth,3), round(percent_bias_depth,3)),
                 text_position=text_position
                 )
 
@@ -434,8 +450,8 @@ def get_annual_mean_analysis(DF, watershed_area,
     percent_bias = sum(annual_mean['bias']) / sum(annual_mean['obs']) * 100
 
     # annual mean in depth
-    annual_mean['sim_depth'] = annual_mean['sim'] * 24 * 3600 * 365 * 1000 * (watershed_area ** -1)
-    annual_mean['obs_depth'] = annual_mean['obs'] * 24 * 3600 * 365 * 1000 * (watershed_area ** -1)
+    annual_mean['sim_depth'] = annual_mean['sim'] * 24 * 3600 * 365.25 * 1000 * (watershed_area ** -1)
+    annual_mean['obs_depth'] = annual_mean['obs'] * 24 * 3600 * 365.25 * 1000 * (watershed_area ** -1)
     annual_mean['bias_depth'] = annual_mean['sim_depth'] - annual_mean['obs_depth']
     bias_mean_depth = annual_mean['bias_depth'].mean()
     percent_bias_depth = sum(annual_mean['bias_depth']) / sum(annual_mean['obs_depth']) * 100
@@ -478,7 +494,7 @@ def get_annual_mean_analysis(DF, watershed_area,
                 title='Annual mean bias',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(bias_mean, percent_bias),
+                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean,3), round(percent_bias,3)),
                 text_position=text_position
                 )
 
@@ -511,7 +527,7 @@ def get_annual_mean_analysis(DF, watershed_area,
                 title='Annual mean bias (in depth)',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(bias_mean_depth, percent_bias_depth),
+                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean_depth, 2), round(percent_bias_depth, 2)),
                 text_position=text_position
                 )
 
@@ -582,7 +598,7 @@ def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=
                 title='April-July volume error',
                 legend=True,
                 time_axis=False,
-                text='volume error = {} \npercent error= {}'.format(volume_error, percent_error),
+                text='volume error = {} \npercent error= {}'.format(round(volume_error,3), round(percent_error,3)),
                 text_position=text_position,
                 )
 
@@ -615,7 +631,7 @@ def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=
                 title='April-July volume error (in depth)',
                 legend=True,
                 time_axis=False,
-                text='volume error = {} \npercent error= {}'.format(volume_error_depth, percent_error_depth),
+                text='volume error = {} \npercent error= {}'.format(round(volume_error_depth,2), round(percent_error_depth,2)),
                 text_position=text_position,
                 )
 
