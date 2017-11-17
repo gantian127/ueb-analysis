@@ -162,6 +162,44 @@ def get_rit_discharge(discharge, skiprows=3, start_date_obj=None, end_date_obj=N
     return discharge
 
 
+# Functions for SAC mass balance check
+def get_sac_ts_dataframe(ts_file_list, start_time='', end_time='', sim_skip=91,
+                          time_change_ori=('24', '25'), time_change_new=('23', '1'),
+                          grouper_freq=None, save_as=None):
+    """
+     This will create the daily sim vs obs data frame for discharge comparision
+    """
+    df_list = []
+
+    # get sim daily data
+    for ts_file in ts_file_list:
+        if os.path.isfile(ts_file):
+            column_name = '_'.join(os.path.basename(ts_file).split('_')[1:-1])
+            raw_sim = pd.read_csv(ts_file, skiprows=sim_skip, header=None, names=['raw'])
+            sim_data = raw_sim['raw'].str.split('\s+', expand=True)
+            sim_data.rename(columns={3: column_name }, inplace=True)
+            sim_data[column_name] = sim_data[column_name].astype(float)
+            for i in range(0, len(time_change_ori)):
+                sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace(time_change_ori[i], time_change_new[i]))
+            sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
+            sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
+            sim_data.drop([0, 1, 2], axis=1, inplace=True)
+            sim_data.ix[sim_data[column_name] < 0, column_name] = np.nan
+            sim_data = sim_data.set_index('time')
+            df_list.append(sim_data)
+
+    DF = pd.concat(df_list, axis=1, join='inner')
+    if start_time and end_time:
+        DF = DF[(DF.index >= start_time) & (DF.index <= end_time)]
+
+    DF.dropna(inplace=True)
+
+    if grouper_freq:
+        DF = DF.groupby(pd.TimeGrouper(freq=grouper_freq)).mean()
+
+    return DF
+
+
 # Functions used for 22yr model comparision and data analysis
 def get_sim_obs_dataframe(sim_file, obs_file=None, start_time='', end_time='', sim_skip=91, obs_skip=3, obs_unit=0.0283168,
                           time_change_ori=('24', '25'), time_change_new=('23', '1'), save_folder=None):
