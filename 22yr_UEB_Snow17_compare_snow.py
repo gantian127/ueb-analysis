@@ -1,8 +1,9 @@
 """
-This is to analyze the 22yr UEB output for UEB+SAC workflow
+This is to analyze the 22yr UEB output domain averag efor UEB+SAC workflow
 
-Results:
-
+1 get prec data: ts, accumulated
+2 get snow data: ts, accumulated
+3 plot swit, swe, mass balance (prcp,swe,swit)
 
 """
 
@@ -16,7 +17,7 @@ watershed = 'Animas'
 prcp_dir = r'D:\3_NASA_Project\Model output and plots\22yr_Animas_watershed\22yr_Animas_UEB_sections_model_results\ueb_model_run_22yr_work_1988_1994'
 snow_dir = r'D:\3_NASA_Project\Model output and plots\22yr_Animas_watershed\22yr_Animas_UEB_sections_model_results\ueb_22yr_output_netcdf'
 
-results_dir = os.path.join(os.getcwd(), '{}_snow_analysis'.format(watershed))
+results_dir = os.path.join(os.getcwd(), '{}_snow_analysis_domain_average'.format(watershed))
 if not os.path.isdir(results_dir):
     os.mkdir(results_dir)
 
@@ -102,6 +103,15 @@ month_interval = 12
 
 
 # Domain average
+plot_multiple_time_series(DF.time, [DF.var_ave],
+                          title='{} watershed Precipiation (domain average)'.format(watershed),
+                          ylabel='prcp(m/hr)',
+                          month_interval=month_interval,
+                          time_format=time_format,
+                          xlim=xlim,
+                          save_as=os.path.join(results_dir, '{}_prcp_domain_average.png'.format(watershed))
+                          )
+
 plot_multiple_time_series(DF.time, [DF.swe],
                           title='{} watershed SWE (domain average)'.format(watershed),
                           ylabel='SWE(m)',
@@ -125,7 +135,7 @@ plot_multiple_time_series(DF.time,
                            DF.swit_acc,
                            DF.swe
                            ],
-                           title='Animas watershed 22yr simulation (domain average)',
+                           title='{} watershed simulation mass balance (domain average)'.format(watershed),
                            line_label_list=['cumulative precipitation',
                                            'cumulative rain plus melt',
                                            'snow water equivalent'
