@@ -44,7 +44,6 @@ for x in time_str:
 
     time_obj.append(time)
 
-
 # import rti discharge data
 rti_discharge = pd.read_csv(rti_discharge_file, skiprows=3, header=None, names=['raw'])  # time column is used as index in dataframe
 if not (start_date and end_date):
@@ -64,4 +63,4 @@ plot_obs_vs_sim(time=sac_discharge_outlet.index.values,
                 obs=obs_discharge.tolist(),
                 month_interval=12,
                 format='%Y/%m',
-                save_as='obs_sim_discharge_{}_{}.png'.format(watershed, year))
+                save_name='obs_sim_discharge_{}_{}.png'.format(watershed, year))
