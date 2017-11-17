@@ -13,7 +13,7 @@ from plot_SAC_utility import *
 
 sim_file_list = [
                  'DRGC2_discharge_outlet_22yr.ts',
-                 'DRGC2_discharge_outlet_62824_22yr_cali.ts',
+                 'DRGC2_discharge_outlet_28559.ts',
                  # 'DRGC2_discharge_outlet_31567.ts',
                  # 'DRGC2_discharge_outlet_chpc_para.ts' # this is useing the parameter from 62824 to rerun 22yr sac model
                  ]
@@ -77,7 +77,7 @@ if len(sim_file_list) > 1:
     plot_multiple_X_Y(time_data, Y,
                       ax=ax[0], fig=fig,
                       label_list=['obs']+sim_data.columns.tolist(),
-                      linestyle_list=['y-'] + [':']*len(sim_data.columns),
+                      linestyle_list=['-'] + ['-']*len(sim_data.columns),
                       xlim=[datetime(time_data[0].year, 1, 1),
                             datetime(time_data[-1].year, 12, 31)]
                       )
@@ -90,11 +90,11 @@ if len(sim_file_list) > 1:
                 time_axis=True)
 
     difference = [(sim_data.iloc[:, i] - obs_data).tolist() for i in range(0, len(sim_data.columns))]
-    difference_mean = [ sum(x)/len(x) for x in difference]
+    difference_mean = [sum(x)/len(x) for x in difference]
     plot_multiple_X_Y(time_data, difference,
                       ax=ax[1], fig=fig,
                       label_list=sim_data.columns.tolist(),
-                      linestyle_list=[':']*len(sim_data.columns),
+                      linestyle_list=['-']*len(sim_data.columns),
                       xlim=[datetime(time_data[0].year, 1, 1),
                             datetime(time_data[-1].year, 12, 31)]
                       )
