@@ -400,9 +400,9 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
     with open(path, 'a') as my_file:
         my_file.write(
             '\nbias mean = {}'
-            '\npercent bias = {}'
+            '\npercent bias = {}%'
             '\nbias mean depth = {}'
-            '\npercent bias depth = {}'.format(bias_mean, percent_bias, bias_mean_depth, percent_bias_depth)
+            '\npercent bias depth = {}%'.format(bias_mean, percent_bias, bias_mean_depth, percent_bias_depth)
         )
 
     path = os.path.join(save_folder,'monthly_mean.csv') if save_folder else './monthly_mean.csv'
@@ -433,7 +433,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                 title='Monthly mean bias',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean,2), round(percent_bias,2)),
+                text='mean bias = {} \npercent bias= {}%'.format(round(bias_mean,2), round(percent_bias,2)),
                 text_position=text_position
                 )
 
@@ -464,7 +464,7 @@ def get_monthly_mean_analysis(DF, watershed_area, save_folder=None, text_positio
                 title='Monthly mean bias (in depth)',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean_depth,3), round(percent_bias_depth,3)),
+                text='mean bias = {} \npercent bias= {}%'.format(round(bias_mean_depth,3), round(percent_bias_depth,3)),
                 text_position=text_position
                 )
 
@@ -500,9 +500,9 @@ def get_annual_mean_analysis(DF, watershed_area,
     with open(path, 'a') as my_file:
         my_file.write(
             '\nbias mean = {}'
-            '\npercent bias = {}'
+            '\npercent bias = {}%'
             '\nbias mean depth = {}'
-            '\npercent bias depth = {}'.format(bias_mean, percent_bias, bias_mean_depth, percent_bias_depth)
+            '\npercent bias depth = {}%'.format(bias_mean, percent_bias, bias_mean_depth, percent_bias_depth)
         )
 
     # make plots
@@ -532,7 +532,7 @@ def get_annual_mean_analysis(DF, watershed_area,
                 title='Annual mean bias',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean,3), round(percent_bias,3)),
+                text='mean bias = {} \npercent bias= {}%'.format(round(bias_mean,3), round(percent_bias,3)),
                 text_position=text_position
                 )
 
@@ -565,7 +565,7 @@ def get_annual_mean_analysis(DF, watershed_area,
                 title='Annual mean bias (in depth)',
                 legend=True,
                 time_axis=False,
-                text='mean bias = {} \npercent bias= {}'.format(round(bias_mean_depth, 2), round(percent_bias_depth, 2)),
+                text='mean bias = {} \npercent bias= {}%'.format(round(bias_mean_depth, 2), round(percent_bias_depth, 2)),
                 text_position=text_position
                 )
 
