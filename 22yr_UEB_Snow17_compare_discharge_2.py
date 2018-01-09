@@ -9,13 +9,14 @@ This is used to compare the snow17 workflow, ueb workflow, observation discharge
 
 import calendar
 import os
+from datetime import datetime
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_volume_error_stat, \
-    get_annual_mean_stat, get_monthly_mean_stat
+    get_annual_mean_stat, get_monthly_mean_stat, get_basic_stats, plot_obs_vs_sim
 
 
 # user settings
@@ -35,29 +36,54 @@ sim_dict = {
 }
 obs_df = get_obs_dataframe(obs_file,start_time, end_time)
 
+# create result folder
+results_dir = os.path.join(os.getcwd(), 'discharge_snow17_ueb_compare_{}'.format(watershed_name))
+if not os.path.isdir(results_dir):
+    os.mkdir(results_dir)
+
 # get statistics for plot
 monthly_mean_dict = {}
 volume_err_dict = {}
 annual_mean_dict = {}
+basic_stat_dict = {}
 for key, sim_df in sim_dict.items():
     DF = get_DF(sim_df, obs_df)
     monthly_mean_dict[key] = get_monthly_mean_stat(DF, watershed_area)
     annual_mean_dict[key] = get_annual_mean_stat(DF, watershed_area)
     volume_err_dict[key] = get_volume_error_stat(DF, watershed_area)
-
-# create result folder
-results_dir = os.path.join(os.getcwd(), 'compare_discharge_analysis_{}'.format(watershed_name))
-if not os.path.isdir(results_dir):
-    os.mkdir(results_dir)
+    basic_stat_dict[key] = get_basic_stats(DF)
+    plot_obs_vs_sim(
+                    DF=DF,
+                    figsize=[(15,10), (15,5)],
+                    month_interval=12,
+                    ts_xlim=[datetime(DF.time[0].year, 1, 1),
+                             datetime(DF.time[len(DF) - 1].year, 12, 31)],
+                    format='%Y',
+                    ts_title='Time series of observation vs. simulation discharge',
+                    save_folder=results_dir,
+                    save_name='time_series_{}.png'.format(key),
+                    )
 
 # time series plot
-plot_df = pd.concat([sim_dict['ueb'], sim_dict['snow17'], obs_df], axis=1)
-plot_df.columns = ['ueb','snow17','obs']
-fig,ax = plt.subplots(figsize=(13, 6))
-plot_df.plot(ax=ax)
+plot_df = pd.concat([ sim_dict['snow17'], obs_df, sim_dict['ueb']], axis=1)
+plot_df.columns = ['snow17', 'obs', 'ueb']
+fig, ax = plt.subplots(figsize=(13, 6))
+plot_df.plot(ax=ax,x_compat=True)
+ax.xaxis.set_major_locator(mdates.YearLocator(1, month=1, day=1))
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 ax.set_title('time series of discharge')
 ax.set_ylabel('discharge(cms)')
+text = ''
+for key, value in basic_stat_dict.items():
+    text += '{} stats:\n' \
+            'rmse={}\n' \
+            'nse={}\n' \
+            'r={}\n' \
+            'bias={} cms\n\n'.format(key, value[0], value[1], value[3], round(value[4], 3))
+ax.text(0.02, 0.6, text, transform=ax.transAxes, size=8)
 fig.savefig(os.path.join(results_dir, 'time_series.png'), dpi=1200)
+
+
 
 
 # monthly plot (cms)
@@ -181,3 +207,5 @@ text = 'snow17_bias = {}\n' \
                                         round(volume_err_dict['ueb'][4], 3))
 ax6.text(0.02, 0.8, text, transform=ax6.transAxes)
 fig6.savefig(os.path.join(results_dir, 'volume_err_depth.png'), dpi=1200)
+
+print 'analysis is finished'
