@@ -604,11 +604,10 @@ def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=
     with open(path, 'a') as my_file:
         my_file.write(
             '\n volume error = {}'
-            '\n percent error = {} '
+            '\n percent error = {}% '
             '\n volume error depth = {} '
-            '\n percent error depth = {} '.format(volume_error, percent_error, volume_error_depth, percent_error_depth)
+            '\n percent error depth = {}% '.format(volume_error, percent_error, volume_error_depth, percent_error_depth)
         )
-
 
     # make plots
     fig, ax = plt.subplots(2, 1, figsize=(15, 10))
@@ -677,3 +676,130 @@ def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=
     save_fig(fig, path)
 
     return 'Volume error analysis is done.'
+
+
+## functions used for the auto-calibration analysis for all the populations
+def get_basic_stats(stat_df):
+    # rmse: sqrt(mean(sum((Qs-Qo)**2)))
+    stat_df['valDiff'] = stat_df['obs'] - stat_df['sim']
+    valDiff_mean = stat_df['valDiff'].mean()
+    stat_df['valDiffSq'] = stat_df['valDiff'].apply(lambda x: x ** 2)
+    valDiffSq_mean = stat_df['valDiffSq'].mean()
+    rmse = math.sqrt(valDiffSq_mean)
+
+    # nse: 1 - sum ((Qs-Qo)**2) / sum((Qo-Qomean)**2)
+    stat_df['valDiffA'] = stat_df['valDiff'].apply(lambda x: abs(x))
+    valDiffA_mean = stat_df['valDiffA'].mean()
+    obs_mean = stat_df['obs'].mean()
+    valDiffSq_sum = stat_df['valDiffSq'].sum()
+
+    stat_df['valDiffMean'] = stat_df['obs'].apply(lambda x: x - obs_mean)
+    stat_df['valDiffSqmean'] = stat_df['valDiffMean'].apply(lambda x: x ** 2)
+    valDiffSqmean_sum = stat_df['valDiffSqmean'].sum()
+
+    nse = 1 - (valDiffSq_sum / valDiffSqmean_sum)
+    mae = valDiffA_mean
+
+    # correlation coefficient
+    r = stat_df[['obs', 'sim']].corr()['obs'][1]
+
+    # bias: Qs-Qo
+    stat_df['bias'] = stat_df['sim'] - stat_df['obs']
+    bias = stat_df['bias'].mean()
+
+    return rmse, nse, mae, r, bias
+
+
+def get_volume_error_stat(DF, watershed_area, start_month=4, end_month=7):
+    DF['sim_vol'] = DF['sim'] * 24 * 60 * 60
+    DF['obs_vol'] = DF['obs'] * 24 * 60 * 60
+    monthly_vol = DF.set_index('time').resample('M')['sim_vol', 'obs_vol'].sum()
+    monthly_vol_subset = monthly_vol[(monthly_vol.index.month >= start_month) & (monthly_vol.index.month <= end_month)]
+    monthly_vol_subset_sum = monthly_vol_subset.resample('A').sum()
+    monthly_vol_subset_sum['error'] = monthly_vol_subset_sum['sim_vol'] - monthly_vol_subset_sum['obs_vol']
+    volume_error = monthly_vol_subset_sum['error'].mean()
+    percent_error = sum(monthly_vol_subset_sum['error']) / sum(monthly_vol_subset_sum['obs_vol']) * 100
+
+    monthly_vol_subset_sum['sim_depth'] = monthly_vol_subset_sum['sim_vol'] / watershed_area * 1000
+    monthly_vol_subset_sum['obs_depth'] = monthly_vol_subset_sum['obs_vol'] / watershed_area * 1000
+    monthly_vol_subset_sum['error_depth'] = monthly_vol_subset_sum['sim_depth'] - monthly_vol_subset_sum['obs_depth']
+    volume_error_depth = monthly_vol_subset_sum['error_depth'].mean()
+    percent_error_depth = sum(monthly_vol_subset_sum['error_depth']) / sum(monthly_vol_subset_sum['obs_depth']) * 100
+
+    return monthly_vol_subset_sum, volume_error, percent_error, volume_error_depth, percent_error_depth
+
+
+def get_annual_mean_stat(DF, watershed_area):
+    # annual mean in discharge
+    annual_mean = DF.set_index('time').resample('A-SEP').mean()
+    annual_mean['bias'] = annual_mean['sim'] - annual_mean['obs']
+    bias_mean = annual_mean['bias'].mean()
+    percent_bias = sum(annual_mean['bias']) / sum(annual_mean['obs']) * 100
+
+    # annual mean in depth
+    annual_mean['sim_depth'] = annual_mean['sim'] * 24 * 3600 * 365.25 * 1000 * (watershed_area ** -1)
+    annual_mean['obs_depth'] = annual_mean['obs'] * 24 * 3600 * 365.25 * 1000 * (watershed_area ** -1)
+    annual_mean['bias_depth'] = annual_mean['sim_depth'] - annual_mean['obs_depth']
+    bias_mean_depth = annual_mean['bias_depth'].mean()
+    percent_bias_depth = sum(annual_mean['bias_depth']) / sum(annual_mean['obs_depth']) * 100
+
+    return annual_mean, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth
+
+
+def get_monthly_mean_stat(DF, watershed_area):
+    # monthly_mean
+    monthly_mean = DF.groupby([DF.time.dt.month, DF.time.dt.year]).mean()
+    monthly_mean_multiyear = monthly_mean.groupby(level=0).mean()
+    monthly_mean_multiyear['bias'] = monthly_mean_multiyear['sim'] - monthly_mean_multiyear['obs']
+    bias_mean = monthly_mean_multiyear['bias'].mean()
+    percent_bias = sum(monthly_mean_multiyear['bias']) / sum(monthly_mean_multiyear['obs']) * 100
+
+    # monthly bias in depth
+    monthly_mean_multiyear['factor'] = [calendar.monthrange(2010, x)[1] * 24 * 3600 * (watershed_area ** -1) * 1000 for x
+                                        in range(1, 13)]  # depth in mm
+    monthly_mean_multiyear['sim_depth'] = monthly_mean_multiyear.sim * monthly_mean_multiyear.factor
+    monthly_mean_multiyear['obs_depth'] = monthly_mean_multiyear.obs * monthly_mean_multiyear.factor
+    monthly_mean_multiyear['bias_depth'] = monthly_mean_multiyear['sim_depth'] - monthly_mean_multiyear['obs_depth']
+    bias_mean_depth = monthly_mean_multiyear['bias_depth'].mean()
+    percent_bias_depth = sum(monthly_mean_multiyear['bias_depth']) / sum(monthly_mean_multiyear['obs_depth']) * 100
+
+    return monthly_mean_multiyear, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth
+
+
+def get_sim_dataframe(sim_file, start_time='', end_time='', sim_skip=91, time_change_ori=('24', '25'), time_change_new=('23', '1')):
+    # get sim daily data
+    raw_sim = pd.read_csv(sim_file, skiprows=sim_skip, header=None, names=['raw'])
+    sim_data = raw_sim['raw'].str.split('\s+', expand=True)
+    sim_data.rename(columns={3: 'sim'}, inplace=True)
+    sim_data['sim'] = sim_data['sim'].astype(float)
+    for i in range(0, len(time_change_ori)):
+        sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace(time_change_ori[i], time_change_new[i]))
+    sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
+    sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
+    sim_data.drop([0, 1, 2], axis=1, inplace=True)
+    sim_data.ix[sim_data.sim < 0, 'sim'] = np.nan
+    sim = sim_data.set_index('time').groupby(pd.TimeGrouper(freq='D'))['sim'].mean()
+
+    if start_time and end_time:
+        sim = sim[(sim.index >= start_time) & (sim.index <= end_time)]
+
+    return sim
+
+
+def get_obs_dataframe(obs_file, start_time='', end_time='', obs_skip=3, obs_unit=0.0283168):
+    obs = pd.read_csv(obs_file, skiprows=obs_skip, header=None, names=['obs'])
+    obs.index = pd.to_datetime(obs.index, format='%Y-%m-%d %H:%M:%S')
+    obs['obs'] = obs['obs'].apply(lambda x: x*obs_unit)
+    obs.ix[obs.obs < 0, 'obs'] = np.nan  # remove negative value
+
+    if start_time and end_time:
+        obs = obs[(obs.index >= start_time) & (obs.index <= end_time)]
+
+    return obs
+
+
+def get_DF(sim, obs):
+    DF = pd.concat([sim, obs], axis=1, join_axes=[sim.index]).reset_index()
+    DF.columns = ['time','sim', 'obs']
+
+    return DF
