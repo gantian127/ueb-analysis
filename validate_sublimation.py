@@ -29,15 +29,15 @@ start_time = '1993-07-01'
 end_time = '1993-08-01'
 
 var_plot_list = [
-    # (['Ta', 'Tc'], 'C'),
-    # ('SWIT', 'm/hr'),
-    # (['P', 'Pr', 'Ps'], 'm/hr'),
-    # (['SWE', 'Wc'], 'm'),
-    # ('SWE', 'm'),
-    # ('Wc', 'm'),
-    # (['Es', 'Ec'], 'm/hr'),
-    # ('cumes', 'm'),
-    # ('cump', 'm'),
+    (['Ta', 'Tc'], 'C'),
+    ('SWIT', 'm/hr'),
+    (['P', 'Pr', 'Ps'], 'm/hr'),
+    (['SWE', 'Wc'], 'm'),
+    ('SWE', 'm'),
+    ('Wc', 'm'),
+    (['Es', 'Ec'], 'm/hr'),
+    ('cumes', 'm'),
+    ('cump', 'm'),
     ('cumMr', 'm')
 ]
 
