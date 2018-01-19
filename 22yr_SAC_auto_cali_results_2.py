@@ -1,8 +1,10 @@
 """
 This is used to analyze all the auto-calibration population results.
+This is to replace version 1. Only need to run this script to get the analysis and results
 
 - time series plots for all populations and the best option (least percent error sum)
 - box plot to show the parameter values and the objective values
+
 
 
 """
