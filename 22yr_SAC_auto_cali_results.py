@@ -30,7 +30,7 @@ os.mkdir('./analysis')
 
 obs_file = os.path.join('./data/hisobs', os.listdir('./data/hisobs/')[0])
 option_list = []
-stat_names = ['rmse', 'nse', 'r', 'mae']
+stat_names = ['rmse', 'nse', 'r', 'mae','bias']
 top_number = 6
 
 # get the statistics for all options
@@ -63,8 +63,10 @@ with open('./analysis/ranks.csv', 'wb') as ranks:
     for i in range(0, len(stat_names)):
         wr.writerow(['{}'.format(stat_names[i])])
         a = option_list[1:]
+        if start_name[i] == 'bias':
+            a = [abs(x) for x in a]
 
-        a.sort(key=lambda pair: pair[i], reverse=False if stat_names[i] in ['mae', 'rmse'] else True)
+        a.sort(key=lambda pair: pair[i], reverse=False if stat_names[i] in ['mae', 'rmse', 'bias'] else True)
         wr.writerows(a[:top_number])
         for option in a[:top_number]:
             optimal_folders.append(option[-1])
