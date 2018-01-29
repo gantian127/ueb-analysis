@@ -28,7 +28,8 @@ folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 modis_bin_folder = os.path.join(result_folder, 'modis_bin_folder')
 swe_bin_folders = [os.path.join(result_folder, name) for name in ['snow17_bin_folder', 'ueb_bin_folder']]
-valid_date_path = os.path.join(result_folder, 'valid_date.csv')
+stats_folder = os.path.join(result_folder, 'stats_folder')
+valid_date_path = os.path.join(stats_folder, 'valid_date.csv')
 
 
 # step 1 calculate area stats ################################################
@@ -61,7 +62,7 @@ for bin_folder in cal_folders:
                 area_stats.loc[i] = [time, bin_path, None, None, None, None]
                 continue
 
-        area_stats.to_csv(os.path.join(result_folder, '{}_area_stats.csv'.format(bin_col_name)))
+        area_stats.to_csv(os.path.join(stats_folder, '{}_area_stats.csv'.format(bin_col_name)))
         valid_date.to_csv(valid_date_path)
 
 # TODO need to export as text.
@@ -72,7 +73,7 @@ for bin_folder in swe_bin_folders:
         stats_result = get_statistics(valid_date['percent_snow_'+bin_col_name], valid_date['percent_snow_modis_bin_folder'])
         result.append(bin_col_name+json.dumps(stats_result))
 
-with open(os.path.join(result_folder,'area_stat_results.txt'),'w') as f:
+with open(os.path.join(stats_folder, 'area_stat_results.txt'), 'w') as f:
     for item in result:
         f.write("%s\n" % item)
 
@@ -86,6 +87,8 @@ valid_date = pd.DataFrame.from_csv(valid_date_path, header=0)
 for swe_bin_folder in swe_bin_folders:
     swe_bin_col = os.path.basename(swe_bin_folder)
     layer_stack = []
+    snow_stack_modis = []
+    snow_stack_swe = []
     if os.path.isdir(swe_bin_folder):
         # get compare grid layers
         for time in valid_date.index:
@@ -99,6 +102,25 @@ for swe_bin_folder in swe_bin_folders:
                 model = np.where(raster_model != -999, raster_model, np.nan)
                 compare = obs-model  # 0 means true, 1 means false, -1 means false
                 layer_stack.append(compare)
+                snow_stack_modis.append(obs)
+                snow_stack_swe.append(model)
+
+        # snow stack to show number of days that has snow in the pixel
+
+        nan_mask = np.isnan(model)
+        name = ['modis', 'swe']
+        for snow_stack, name in zip([snow_stack_modis, snow_stack_swe],['modis','swe']):
+            all_snow_stack = np.stack(snow_stack)
+            days_of_snow = np.where(nan_mask == False, np.nansum(all_snow_stack, axis=0), np.nan)
+
+            np.save(os.path.join(stats_folder, 'days_of_snow_{}'.format(name)), days_of_snow)
+            np.save(os.path.join(stats_folder, 'all_snow_stack_{}'.format(name)), all_snow_stack)
+
+            fig = plt.imshow(days_of_snow, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of {}'.format('days of snow from {}'.format(name)))
+            plt.savefig(os.path.join(stats_folder, 'days_of_snow_{}.png'.format(name)))
+            plt.clf()
 
         # stack layers and calculate oa values
         nan_mask = np.isnan(model)
@@ -115,7 +137,7 @@ for swe_bin_folder in swe_bin_folders:
         }
 
         for name, data in result.items():
-            file_path = os.path.join(result_folder, '{}_{}'.format(name, swe_bin_col))
+            file_path = os.path.join(stats_folder, '{}_{}'.format(name, swe_bin_col))
             np.save(file_path, data)
 
             if name != 'all_stack':

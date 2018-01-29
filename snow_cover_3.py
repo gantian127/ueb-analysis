@@ -34,7 +34,10 @@ modis_threshold = 50  # %
 cloud_threshold = 0.1  # *100 percent
 
 # new csv file path
-valid_date_path = os.path.join(result_folder, 'valid_date.csv')
+stats_folder = os.path.join(result_folder,'stats_folder')
+if not os.path.isdir(stats_folder):
+    os.mkdir(stats_folder)
+valid_date_path = os.path.join(stats_folder, 'valid_date.csv')
 
 
 # step1: calculate cloud cover ##############################################################
