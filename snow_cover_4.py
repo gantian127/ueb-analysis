@@ -3,6 +3,9 @@ This is the formal script for snow cover area analysis
 
 step4: get valid modis data and create processing binary files
 
+requirements:
+- make sure snow_cover_1.py, snow_cover_2.py snow_cover_3.py is executed.
+
 step:
 - calculate area based stats
 - calculate pixel based stats
@@ -22,7 +25,7 @@ from snow_cover_utility import get_statistics, array_to_raster
 
 # default user settings apply to all steps ####################################################
 
-# folders/files created by step 2 script
+# folders/files created by step 1, 2 3 script
 watershed = 'animas'
 folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
