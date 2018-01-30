@@ -17,11 +17,11 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import gdalnumeric
 
-from snow_cover_utility import get_statistics
-
+from snow_cover_utility import get_statistics, array_to_raster
 
 
 # default user settings apply to all steps ####################################################
+
 # folders/files created by step 2 script
 watershed = 'animas'
 folder_name = '{}_snow_analysis_result'.format(watershed)
@@ -30,6 +30,9 @@ modis_bin_folder = os.path.join(result_folder, 'modis_bin_folder')
 swe_bin_folders = [os.path.join(result_folder, name) for name in ['snow17_bin_folder', 'ueb_bin_folder']]
 stats_folder = os.path.join(result_folder, 'stats_folder')
 valid_date_path = os.path.join(stats_folder, 'valid_date.csv')
+
+# reprojection info
+proj4_string = '+proj=stere +lat_0=90.0 +lat_ts=60.0 +lon_0=-105.0 +k=1 +x_0=0.0 +y_0=0.0 +a=6371200 +b=6371200 +units=m +no_defs'  # polar stereographic
 
 
 # step 1 calculate area stats ################################################
@@ -106,21 +109,27 @@ for swe_bin_folder in swe_bin_folders:
                 snow_stack_swe.append(model)
 
         # snow stack to show number of days that has snow in the pixel
-
         nan_mask = np.isnan(model)
         name = ['modis', 'swe']
         for snow_stack, name in zip([snow_stack_modis, snow_stack_swe],['modis','swe']):
             all_snow_stack = np.stack(snow_stack)
-            days_of_snow = np.where(nan_mask == False, np.nansum(all_snow_stack, axis=0), np.nan)
+            np.save(os.path.join(stats_folder, 'all_snow_stack_{}_{}'.format(name, swe_bin_col)), all_snow_stack)
 
-            np.save(os.path.join(stats_folder, 'days_of_snow_{}'.format(name)), days_of_snow)
-            np.save(os.path.join(stats_folder, 'all_snow_stack_{}'.format(name)), all_snow_stack)
+            days_of_snow = np.where(nan_mask == False, np.nansum(all_snow_stack, axis=0), np.nan)
+            file_path = os.path.join(stats_folder, 'days_of_snow_{}_{}'.format(name, swe_bin_col))
+
+            np.save(file_path, days_of_snow)
 
             fig = plt.imshow(days_of_snow, interpolation='nearest')
             plt.colorbar()
             plt.title('plot of {}'.format('days of snow from {}'.format(name)))
-            plt.savefig(os.path.join(stats_folder, 'days_of_snow_{}.png'.format(name)))
+            plt.savefig(file_path+'.png')
             plt.clf()
+
+            # export result as raster data
+            array_to_raster(output_path=file_path+'.tif',
+                            source_path=swe_bin_path,
+                            array_data=days_of_snow)
 
         # stack layers and calculate oa values
         nan_mask = np.isnan(model)
@@ -146,6 +155,11 @@ for swe_bin_folder in swe_bin_folders:
                 plt.title('plot of {}'.format(name))
                 plt.savefig(file_path+'.png')
                 plt.clf()
+
+                # export result as raster data
+                array_to_raster(output_path=file_path+'.tif',
+                                source_path=swe_bin_path,
+                                array_data=data)
 
 
 print 'oa calculate is done'

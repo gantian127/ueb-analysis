@@ -5,7 +5,8 @@ This includes  the utility functions to support snow cover area analysis
 import pandas as pd
 import numpy as np
 import math
-
+import gdal
+from gdalconst import GA_ReadOnly
 
 
 def get_sim_dataframe(sim_file, start_time='', end_time='', sim_skip=91, time_change_ori=('24', '25'), time_change_new=('23', '1'), column_name=''):
@@ -62,3 +63,32 @@ def get_statistics(sim, obs):
     bias = stat_df['bias'].mean()
 
     return {'rmse': rmse, 'nse': nse, 'mae': mae, 'r': r, 'bias': bias}
+
+
+def array_to_raster(output_path, source_path, array_path=None, array_data=None, no_data=-999, x_size=None, y_size=None, data_type='float32'):
+    data_type_mapping = {
+        'Int16': gdal.GDT_Int16,
+        'float32': gdal.GDT_Float32
+    }
+
+    if array_path:
+        raster_data = np.load(array_path)
+        raster_data[np.isnan(raster_data)] = no_data
+    else:
+        raster_data = array_data
+
+    source_raster = gdal.Open(source_path, GA_ReadOnly)
+    driver = gdal.GetDriverByName("GTiff")
+    if not(x_size and y_size):
+        x_size = raster_data.shape[-1]
+        y_size = raster_data.shape[-2]
+    output_raster = driver.Create(output_path, x_size, y_size, bands=1, eType=data_type_mapping[data_type])
+    output_raster.SetGeoTransform(source_raster.GetGeoTransform())
+    output_raster.SetProjection(source_raster.GetProjection())
+    output_raster.GetRasterBand(1).SetNoDataValue(no_data)
+    output_raster.GetRasterBand(1).WriteArray(raster_data.astype(data_type))
+
+    output_raster = None
+    source_raster = None
+
+    return 'finish raster creation'
