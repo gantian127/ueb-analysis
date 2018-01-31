@@ -155,12 +155,9 @@ for data_name, ylabel in zip(['elev_pixel', 'elev_percent'], ['pixel count', 'ar
 
 # step3 slope stats ############################################################
 print 'step3: start slope stats analysis'
-bin_number = 6
-scale = 100
 
 slope_stats = pd.DataFrame()
 slope_stats_path = os.path.join(terrain_stats_folder, 'slope_stats_low_oa')
-slope_stat_grid_list = []
 model_name_list = []
 
 # get low oa slope grid tif and png file
@@ -176,7 +173,6 @@ for oa_array_path in oa_array_path_list:
             slope[slope < 0] = -999
             low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
             slope_stat_grid = np.where(low_oa != -999, slope, -999)
-            slope_stat_grid_list.append(slope_stat_grid)
             np.save(slope_stats_path + '_{}.npy'.format(model_name), slope_stat_grid)
 
             # calculate low oa slope stats
@@ -214,7 +210,90 @@ for data_name, ylabel in zip(['slope_pixel', 'slope_percent'], ['pixel count', '
                     )
 
 # step4 aspect stats ############################################################
+print 'step4: start aspect stats analysis'
 
+aspect_stats = pd.DataFrame()
+aspect_stats_path = os.path.join(terrain_stats_folder, 'aspect_stats_low_oa')
+model_name_list = []
+
+# get low oa aspect grid tif and png file
+for oa_array_path in oa_array_path_list:
+    if os.path.isfile(oa_array_path):
+        model_name = os.path.basename(oa_array_path).split('_')[1]
+        model_name_list.append(model_name)
+        oa_result = np.load(oa_array_path)
+        oa_result[np.isnan(oa_result)] = -999
+        if os.path.isfile(aspect_path):
+            # preprocess aspect with index and get stats
+            aspect = gdalnumeric.LoadFile(aspect_path)[0]
+            aspect[oa_result == -999] = -999
+            for bound, index in zip(range(0, 360, 45), range(1, 9)):
+                aspect[(aspect >= bound) & (aspect < bound+45)] = index
+            np.save(aspect_stats_path + '_ori_index_{}.npy'.format(model_name), aspect)
+
+            hist, bin = np.histogram(aspect, range=(1, 8), bins=range(1, 10))  # np.unique(aspect_stat_grid,return_counts=True)
+            aspect_stats['aspect_pixel_ori_{}'.format(model_name)] = hist
+            aspect_stats['aspect_percent_ori_{}'.format(model_name)] = [round(float(x) * 100 / hist.sum(), 1) for x in hist]
+            aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
+            aspect_stats.to_csv(aspect_stats_path + '.csv')
+
+            # get low oa aspect stats
+            low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
+            aspect_stat_grid = np.where(low_oa != -999, aspect, -999)
+            np.save(aspect_stats_path + '_index_{}.npy'.format(model_name), aspect_stat_grid)
+
+            # preprocess grid and calculate low oa aspect stats
+            # for bound, index in zip(range(0, 360, 45), range(1, 9)):
+            #     aspect_stat_grid[(aspect_stat_grid >= bound) & (aspect_stat_grid < bound+45)] = index
+            # np.save(aspect_stats_path + '_index_{}.npy'.format(model_name), aspect_stat_grid)
+
+            hist, bin = np.histogram(aspect_stat_grid, range=(1, 8), bins=range(1, 10))  # np.unique(aspect_stat_grid,return_counts=True)
+            aspect_stats['aspect_pixel_{}'.format(model_name)] = hist
+            aspect_stats['aspect_percent_{}'.format(model_name)] = [round(float(x) * 100 / hist.sum(), 1) for x in
+                                                                    hist]
+            aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
+            aspect_stats.to_csv(aspect_stats_path + '.csv')
+
+            # make low oa aspect plot
+            plt.clf()
+            plt.imshow(aspect_stat_grid, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of low oa aspect for {}'.format(model_name))
+            plt.savefig(aspect_stats_path + '_{}.png'.format(model_name))
+
+            # save low oa aspect as tif
+            array_to_raster(output_path=aspect_stats_path + '_{}.tif'.format(model_name),
+                            source_path=aspect_path,
+                            array_data=aspect_stat_grid)
+        else:
+            print'provide aspect file path !!'
+    else:
+        print 'provide oa array file path!!'
+
+for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count', 'arae(%)']):
+    aspect_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
+    aspect_hist = [data_name+'_ori_{}'.format(model) for model in model_name_list]
+    for stat_hist,tag in zip([aspect_stat_hist, aspect_hist], ['final', 'ori']):
+        create_bar_plot(aspect_stats, stat_hist,
+                        ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
+                        title='plot of {} {}'.format(data_name,tag),
+                        xlabel='aspect (degree)',
+                        ylabel=ylabel,
+                        legend=True,
+                        labels=model_name_list,
+                        save_path=os.path.join(terrain_stats_folder, 'aspect_stats_barplot_of_{}_{}.png').format(data_name, tag)
+                        )
+
+    create_bar_plot(aspect_stats, aspect_hist+aspect_stat_hist,
+                    ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
+                    title='plot of {} {}'.format(data_name,tag),
+                    xlabel='aspect (degree)',
+                    ylabel=ylabel,
+                    legend=True,
+                    # labels=model_name_list,
+                    figsize=(10, 6),
+                    save_path=os.path.join(terrain_stats_folder, 'aspect_stats_barplot_of_{}_mix.png').format(data_name)
+                    )
 
 
 
