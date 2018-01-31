@@ -1,7 +1,7 @@
 """
 This is the formal script for snow cover area analysis
 
-step4: get valid modis data and create processing binary files
+step4: read and process the binary grid to calculate stats
 
 requirements:
 - make sure snow_cover_1.py, snow_cover_2.py snow_cover_3.py is executed.

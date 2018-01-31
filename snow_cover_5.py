@@ -33,7 +33,7 @@ proj4_string = '+proj=stere +lat_0=90.0 +lat_ts=60.0 +lon_0=-105.0 +k=1 +x_0=0.0
 folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 model_snow_date_path = os.path.join(result_folder, 'model_snow_date.csv')
-terrain_folder = os.path.join(os.getcwd(), result_folder, 'terrain')
+terrain_folder = os.path.join(result_folder, 'terrain')
 if not os.path.isdir(terrain_folder):
     os.mkdir(terrain_folder)
 
@@ -52,7 +52,7 @@ for item in HDS.list_my_files():
 
 # Subset DEM and Delineate Watershed
 input_static_DEM = 'nedWesternUS.tif'
-subset_raster = watershed + 'DEM84.tif'
+subset_raster = watershed + '_dem.tif'
 subsetDEM = HDS.subset_raster(input_raster=input_static_DEM, left=leftX, top=topY, right=rightX,
                                       bottom=bottomY, output_raster=subset_raster)
 

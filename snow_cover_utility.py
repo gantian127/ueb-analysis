@@ -7,6 +7,7 @@ import numpy as np
 import math
 import gdal
 from gdalconst import GA_ReadOnly
+import matplotlib.pyplot as plt
 
 
 def get_sim_dataframe(sim_file, start_time='', end_time='', sim_skip=91, time_change_ori=('24', '25'), time_change_new=('23', '1'), column_name=''):
@@ -92,3 +93,25 @@ def array_to_raster(output_path, source_path, array_path=None, array_data=None, 
     source_raster = None
 
     return 'finish raster creation'
+
+
+def create_bar_plot(data_frame, data_list, x_ticks_list=None,
+                    fig=None, ax=None, figsize=None,
+                    legend=False, title='', xlabel='',
+                    ylabel='', save_path=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    data_frame[data_list].plot.bar(ax=ax, legend=legend)
+
+    if x_ticks_list:
+        ax.set_xticklabels(x_ticks_list)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+
+    if save_path:
+        fig.savefig(save_path)
+
+    return fig, ax

@@ -1,7 +1,7 @@
 """
 This is the formal script for snow cover area analysis
 
-step3: get valid modis data and create processing binary files
+step3:  calculate cloud cover -> get valid modis and swe data to create binary files
 
 step:
 - calculate cloud cover
