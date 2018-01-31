@@ -50,7 +50,7 @@ if not os.path.isdir(terrain_stats_folder):
 
 
 # step1 OA stats ###################################################################
-print 'start oa stats analysis'
+print 'step1: start oa stats analysis'
 oa_stats = pd.DataFrame()
 oa_stats_path = os.path.join(terrain_stats_folder, 'oa_stats.csv')
 model_name_list = []
@@ -84,7 +84,7 @@ for name, ylabel in zip(['oa_pixel', 'oa_percent'], ['pixel count', 'arae(%)']):
 
 
 # step2 Elevation stats  #############################################################
-print 'start elevation stats analysis'
+print 'step2: start elevation stats analysis'
 bin_number = 6
 scale = 100
 elev_stats = pd.DataFrame()
@@ -104,7 +104,7 @@ for oa_array_path in oa_array_path_list:
             # get low oa elevation grid
             elev = gdalnumeric.LoadFile(elevation_path)[0]
             elev[elev < 0] = -999
-            low_oa = np.where(((oa_result <= 0.7) & (oa_result >= 0)), oa_result, -999)
+            low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
             elev_stat_grid = np.where(low_oa != -999, elev, -999)
             elev_stat_grid_list.append(elev_stat_grid)
             np.save(elev_stats_path+'_{}.npy'.format(model_name), elev_stat_grid)
@@ -153,20 +153,65 @@ for data_name, ylabel in zip(['elev_pixel', 'elev_percent'], ['pixel count', 'ar
                     )
 
 
-
-
-
-
-
-
-
-
-
-
 # step3 slope stats ############################################################
+print 'step3: start slope stats analysis'
+bin_number = 6
+scale = 100
 
+slope_stats = pd.DataFrame()
+slope_stats_path = os.path.join(terrain_stats_folder, 'slope_stats_low_oa')
+slope_stat_grid_list = []
+model_name_list = []
 
+# get low oa slope grid tif and png file
+for oa_array_path in oa_array_path_list:
+    if os.path.isfile(oa_array_path):
+        model_name = os.path.basename(oa_array_path).split('_')[1]
+        model_name_list.append(model_name)
+        oa_result = np.load(oa_array_path)
+        oa_result[np.isnan(oa_result)] = -999
+        if os.path.isfile(slope_path):
+            # get low oa slope grid
+            slope = gdalnumeric.LoadFile(slope_path)[0]
+            slope[slope < 0] = -999
+            low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
+            slope_stat_grid = np.where(low_oa != -999, slope, -999)
+            slope_stat_grid_list.append(slope_stat_grid)
+            np.save(slope_stats_path + '_{}.npy'.format(model_name), slope_stat_grid)
 
+            # calculate low oa slope stats
+            hist, bin = np.histogram(slope_stat_grid, range=(0, 90), bins=9)
+            slope_stats['slope_pixel_{}'.format(model_name)] = hist
+            slope_stats['slope_percent_{}'.format(model_name)] = [round(float(x) * 100 / hist.sum(), 1) for x in hist]
+            slope_stats['slope_bin'] = [int(x) for x in bin[1:]]
+            slope_stats.to_csv(slope_stats_path + '.csv')
+
+            # make low oa slope plot
+            plt.clf()
+            plt.imshow(slope_stat_grid, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of low oa slope for {}'.format(model_name))
+            plt.savefig(slope_stats_path + '_{}.png'.format(model_name))
+
+            # save low oa slope as tif
+            array_to_raster(output_path=slope_stats_path + '_{}.tif'.format(model_name),
+                            source_path=slope_path,
+                            array_data=slope_stat_grid)
+        else:
+            print'provide slope file path !!'
+    else:
+        print 'provide oa array file path!!'
+
+for data_name, ylabel in zip(['slope_pixel', 'slope_percent'], ['pixel count', 'arae(%)']):
+    slope_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
+    create_bar_plot(slope_stats, slope_stat_hist, slope_stats['slope_bin'].tolist(),
+                    title='plot of {}'.format(data_name),
+                    xlabel='slope (degree)',
+                    ylabel=ylabel,
+                    legend=True,
+                    labels=model_name_list,
+                    save_path=os.path.join(terrain_stats_folder, 'slope_stats_barplot_of_{}.png').format(data_name)
+                    )
 
 # step4 aspect stats ############################################################
 
