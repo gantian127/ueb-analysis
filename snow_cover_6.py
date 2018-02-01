@@ -37,7 +37,7 @@ terrain_folder = os.path.join(result_folder, 'terrain')  # step5 to create terra
 stats_folder = os.path.join(result_folder, 'stats_folder')  # step4 to create oa result
 
 oa_array_path_list = [os.path.join(stats_folder, name) for name in ['oa_snow17_bin_folder.npy', 'oa_ueb_bin_folder.npy']]
-elevation_path = os.path.join(terrain_folder,'{}_dem_watershed_clip.tif'.format(watershed))
+elev_path = os.path.join(terrain_folder,'{}_dem_watershed_clip.tif'.format(watershed))
 slope_path = os.path.join(terrain_folder,'{}_slope_clip.tif'.format(watershed))
 aspect_path = os.path.join(terrain_folder, '{}_aspect_clip.tif'.format(watershed))
 nlcd_path = os.path.join(terrain_folder, '{}_nlcd_clip.tif'.format(watershed))
@@ -83,9 +83,10 @@ for name, ylabel in zip(['oa_pixel', 'oa_percent'], ['pixel count', 'arae(%)']):
                     )
 
 
-# step2 Elevation stats  #############################################################
-print 'step2: start elevation stats analysis'
-bin_number = 6
+# step2 elev stats  #############################################################
+print 'step2: start elev stats analysis'
+
+bin_number = 8
 scale = 100
 elev_stats = pd.DataFrame()
 elev_stats_path = os.path.join(terrain_stats_folder, 'elev_stats_low_oa')
@@ -93,7 +94,7 @@ array_path_list = []
 elev_stat_grid_list = []
 model_name_list = []
 
-# get low oa elevation grid tif and png file
+# get low oa elev grid tif and png file
 for oa_array_path in oa_array_path_list:
     if os.path.isfile(oa_array_path):
         model_name = os.path.basename(oa_array_path).split('_')[1]
@@ -101,55 +102,81 @@ for oa_array_path in oa_array_path_list:
         oa_result = np.load(oa_array_path)
         oa_result[np.isnan(oa_result)] = -999
         valid_grid_count = (oa_result != -999).sum()
-        if os.path.isfile(elevation_path):
-            # get low oa elevation grid
-            elev = gdalnumeric.LoadFile(elevation_path)[0]
+        if os.path.isfile(elev_path):
+            # get low oa elev grid
+            elev = gdalnumeric.LoadFile(elev_path)[0]
             elev[elev < 0] = -999
             low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
             elev_stat_grid = np.where(low_oa != -999, elev, -999)
             elev_stat_grid_list.append(elev_stat_grid)
             np.save(elev_stats_path+'_{}.npy'.format(model_name), elev_stat_grid)
-
-            # make low oa elevation plot
+            
+            # save low oa slope as tif
+            array_to_raster(output_path=elev_stats_path + '_{}.tif'.format(model_name),
+                            source_path=elev_path,
+                            array_data=elev_stat_grid)
+            
+            # make low oa elev plot
             plt.clf()
-            plt.imshow(elev_stat_grid, interpolation='nearest')
+            ma = np.ma.masked_equal(np.stack(elev_stat_grid), -999, copy=False)
+            plt.imshow(ma, interpolation='nearest')
             plt.colorbar()
-            plt.title('plot of low oa elevation for {}'.format(model_name))
+            plt.title('plot of low oa elev for {}'.format(model_name))
             plt.savefig(elev_stats_path+'_{}.png'.format(model_name))
 
-
         else:
-            print'provide elevation file path !!'
+            print'provide elev file path !!'
     else:
         print 'provide oa array file path!!'
 
+elev_stat_grid_list.insert(0, elev)
+model_name_list.insert(0, 'ori')
 
-# make low oa elevation stats comparison bar plot
+# make low oa elev stats comparison bar plot
 ma = np.ma.masked_equal(np.stack(elev_stat_grid_list), -999, copy=False)
 start = scale*int(ma.min()/scale)
 end = scale*(int(ma.max()/scale)+1)
 step = ((end-start)/(scale*bin_number)+1)*scale
 
 
+# get elev low oa stats
 for elev_stat_grid, model_name in zip(elev_stat_grid_list, model_name_list):
     hist, bin = np.histogram(elev_stat_grid, range=(start, end), bins=range(start, end+step, step))
     elev_stats['elev_pixel_{}'.format(model_name)] = hist
     elev_stats['elev_percent_{}'.format(model_name)] = [round(float(x)*100/valid_grid_count, 1) for x in hist]
-    elev_stats['elev_bin'] = bin[:-1]
+    if 'elev_bin' not in elev_stats.columns:
+        elev_stats['elev_bin'] = bin[:-1]
     elev_stats.to_csv(elev_stats_path+'.csv')
 
-
+# create barplot for comparison
 for data_name, ylabel in zip(['elev_pixel', 'elev_percent'], ['pixel count', 'arae(%)']):
     elev_stat_hist = [data_name+'_{}'.format(model) for model in model_name_list]
-    create_bar_plot(elev_stats, elev_stat_hist, elev_stats['elev_bin'].tolist(),
-                      title='plot of {}'.format(data_name),
-                      xlabel='elevation (m)',
+    create_bar_plot(elev_stats, elev_stat_hist[1:], elev_stats['elev_bin'].tolist(),
+                      title='plot of {} for low oa area'.format(data_name),
+                      xlabel='elev (m)',
                       ylabel=ylabel,
                       legend=True,
-                      labels=model_name_list,
-                      save_path=os.path.join(terrain_stats_folder, 'elev_stats_barplot_of_{}.png').format(data_name)
+                      labels=['low_oa_'+name for name in model_name_list[1:]],
+                      save_path=os.path.join(terrain_stats_folder, 'elev_stats_barplot_of_{}_low_oa.png').format(data_name)
                     )
 
+    labels = []
+    for name in model_name_list:
+        if 'ori' in name:
+            labels.append('total_area')
+        else:
+            labels.append('low_oa_' + name.split('_')[-1])
+
+    create_bar_plot(elev_stats, elev_stat_hist,
+                    elev_stats['elev_bin'].tolist(),
+                    title='plot of {} total area vs. low OA area'.format(data_name),
+                    xlabel='angel (degree)',
+                    ylabel=ylabel,
+                    legend=True,
+                    labels=labels,
+                    figsize=(12, 6),
+                    save_path=os.path.join(terrain_stats_folder, 'slope_stats_barplot_of_{}_compare.png').format(data_name)
+                    )
 
 # step3 slope stats ############################################################
 print 'step3: start slope stats analysis'
@@ -233,7 +260,7 @@ for data_name, ylabel in zip(['slope_pixel', 'slope_percent'], ['pixel count', '
 
     create_bar_plot(slope_stats, slope_ori_hist + slope_stat_hist,
                     slope_stats['slope_bin'].tolist(),
-                    title='plot of {} for low OA area'.format(data_name),
+                    title='plot of {} total area vs. low OA area'.format(data_name),
                     xlabel='angel (degree)',
                     ylabel=ylabel,
                     legend=True,
