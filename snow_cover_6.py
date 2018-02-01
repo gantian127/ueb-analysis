@@ -153,7 +153,7 @@ for data_name, ylabel in zip(['elev_pixel', 'elev_percent'], ['pixel count', 'ar
     elev_stat_hist = [data_name+'_{}'.format(model) for model in model_name_list]
     create_bar_plot(elev_stats, elev_stat_hist[1:], elev_stats['elev_bin'].tolist(),
                       title='plot of {} for low oa area'.format(data_name),
-                      xlabel='elev (m)',
+                      xlabel='elev(m)',
                       ylabel=ylabel,
                       legend=True,
                       labels=['low_oa_'+name for name in model_name_list[1:]],
@@ -170,12 +170,12 @@ for data_name, ylabel in zip(['elev_pixel', 'elev_percent'], ['pixel count', 'ar
     create_bar_plot(elev_stats, elev_stat_hist,
                     elev_stats['elev_bin'].tolist(),
                     title='plot of {} total area vs. low OA area'.format(data_name),
-                    xlabel='angel (degree)',
+                    xlabel='elev(m)',
                     ylabel=ylabel,
                     legend=True,
                     labels=labels,
                     figsize=(12, 6),
-                    save_path=os.path.join(terrain_stats_folder, 'slope_stats_barplot_of_{}_compare.png').format(data_name)
+                    save_path=os.path.join(terrain_stats_folder, 'elev_stats_barplot_of_{}_compare.png').format(data_name)
                     )
 
 # step3 slope stats ############################################################
@@ -338,7 +338,7 @@ for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count',
     create_bar_plot(aspect_stats, aspect_stat_hist,
                     ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
                     title='plot of {} for low OA area'.format(data_name),
-                    xlabel='aspect (degree)',
+                    xlabel='aspect class',
                     ylabel=ylabel,
                     legend=True,
                     figsize=(8, 5),
@@ -357,7 +357,7 @@ for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count',
     create_bar_plot(aspect_stats, aspect_ori_hist + aspect_stat_hist,
                     ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
                     title='plot of {} total area vs. low OA area'.format(data_name),
-                    xlabel='aspect (degree)',
+                    xlabel='aspect class',
                     ylabel=ylabel,
                     legend=True,
                     labels=labels,
@@ -402,7 +402,6 @@ for oa_array_path in oa_array_path_list:
         valid_grid_count = (oa_result != -999).sum()
 
         if os.path.isfile(nlcd_path):
-
             # get nlcd grid and calculate original stats
             nlcd = gdalnumeric.LoadFile(nlcd_path)[0].astype('Int16')
             nlcd[oa_result == -999] = -999
@@ -448,6 +447,8 @@ for oa_array_path in oa_array_path_list:
             plt.savefig(nlcd_stats_path + '_{}.png'.format(model_name))
         else:
             print'provide nlcd file path !!'
+    else:
+        print 'provide oa array file path !!'
 
 
 # create  barplots for comparision
@@ -492,3 +493,6 @@ for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'ar
                     fontsize=10,
                     save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_compare.png').format(data_name)
                     )
+
+
+print 'terrain analysis is done!'
