@@ -100,6 +100,9 @@ def create_bar_plot(data_frame, data_list, x_ticks_list=None,
                     legend=False, title='', xlabel='',
                     labels=None,
                     fontsize=10,
+                    text='',
+                    text_position=(0, 0),
+                    text_fontsize=10,
                     ylabel='', save_path=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -115,6 +118,9 @@ def create_bar_plot(data_frame, data_list, x_ticks_list=None,
 
     if legend and labels:
         ax.legend(labels)
+
+    if text:
+        ax.text(text_position[0], text_position[1], text, transform=ax.transAxes, fontsize=text_fontsize)
 
     if save_path:
         fig.savefig(save_path)

@@ -387,7 +387,7 @@ nlcd_type_dict = {
     52: 'shrub',
     71: 'grasslands',
     81: 'pasture',
-    82: 'cultivated Crops',
+    82: 'cultivated crops',
     90: 'woody wetlands',
     95: 'emergent herbaceous wetlands',
 }   # https://www.mrlc.gov/nlcd11_stat.php
@@ -453,10 +453,12 @@ for oa_array_path in oa_array_path_list:
 
 # create  barplots for comparision
 bin_name_list = []  # create xtick-label for abbreviation names
+text_list = []
 for index in nlcd_stats['nlcd_bin'].tolist():
     full_name = nlcd_type_dict[index]
     short_name = ''.join([name[0].upper() for name in full_name.split()])
     bin_name_list.append(short_name)
+    text_list.append('{}: {}\n'.format(short_name, full_name))
 
 
 for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'arae(%)']):
@@ -491,6 +493,9 @@ for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'ar
                     labels=labels,
                     figsize=(10, 6),
                     fontsize=10,
+                    text=''.join(text_list),
+                    text_position=(0.03, 0.55),
+                    text_fontsize=8,
                     save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_compare.png').format(data_name)
                     )
 
