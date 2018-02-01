@@ -99,6 +99,7 @@ def create_bar_plot(data_frame, data_list, x_ticks_list=None,
                     fig=None, ax=None, figsize=None,
                     legend=False, title='', xlabel='',
                     labels=None,
+                    fontsize=10,
                     ylabel='', save_path=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -106,7 +107,7 @@ def create_bar_plot(data_frame, data_list, x_ticks_list=None,
     data_frame[data_list].plot.bar(ax=ax, legend=legend, rot=0)
 
     if x_ticks_list:
-        ax.set_xticklabels(x_ticks_list)
+        ax.set_xticklabels(x_ticks_list, fontsize=fontsize)
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

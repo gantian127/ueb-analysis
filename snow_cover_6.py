@@ -336,8 +336,10 @@ for oa_array_path in oa_array_path_list:
         oa_result = np.load(oa_array_path)
         oa_result[np.isnan(oa_result)] = -999
         valid_grid_count = (oa_result != -999).sum()
+
         if os.path.isfile(nlcd_path):
-            # get nlcd grid and calculate stats
+
+            # get nlcd grid and calculate original stats
             nlcd = gdalnumeric.LoadFile(nlcd_path)[0].astype('Int16')
             nlcd[oa_result == -999] = -999
 
@@ -381,38 +383,46 @@ for oa_array_path in oa_array_path_list:
         else:
             print'provide nlcd file path !!'
 
-bin_names_list = []
+
+# create  barplots for comparision
+bin_name_list = []  # create xtick-label for abbreviation names
 for index in nlcd_stats['nlcd_bin'].tolist():
     full_name = nlcd_type_dict[index]
-    simple_name = ''.join([name[0].upper() for name in full_name.split()])
-    bin_names_list.append(simple_name)
+    short_name = ''.join([name[0].upper() for name in full_name.split()])
+    bin_name_list.append(short_name)
+
 
 for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'arae(%)']):
     nlcd_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
-    nlcd_hist = [data_name+'_ori_{}'.format(model) for model in model_name_list]
+    nlcd_ori_hist = [data_name+'_ori_{}'.format(model) for model in model_name_list]
 
-    for stat_hist, tag in zip([nlcd_stat_hist, nlcd_hist], ['final', 'ori']):
-        create_bar_plot(nlcd_stats, stat_hist,
-                        bin_names_list,  # this is the tick name for different nlcd index
-                        title='plot of {} {}'.format(data_name,tag),
-                        xlabel='land type',
-                        ylabel=ylabel,
-                        legend=True,
-                        labels=model_name_list,
-                        save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_{}.png').format(data_name, tag)
-                        )
-    create_bar_plot(nlcd_stats, nlcd_hist + nlcd_stat_hist,
-                    bin_names_list,  # this is the tick name for different nlcd index
-                    title='plot of {} {}'.format(data_name, tag),
+    # plot low oa stats (all models in one plot)
+    create_bar_plot(nlcd_stats, nlcd_stat_hist,
+                    bin_name_list,  # this is the tick name for different nlcd index
+                    title='plot of {}'.format(data_name ),
                     xlabel='land type',
                     ylabel=ylabel,
                     legend=True,
-                    # labels=model_name_list,
-                    figsize=(10, 6),
-                    save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_mix.png').format(
-                        data_name)
+                    labels=['low_oa_'+name for name in model_name_list],
+                    figsize=(8, 5),
+                    save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_low_oa.png').format(data_name)
                     )
 
-        # ToDo:  remove water
-        # TODo: for other analysis, make compare plots of original and low oa histogram
-        # Todo: label of the compare plot
+    # plot comparison of low oa and original stats (all models in one plot)
+    labels = []
+    for name in nlcd_ori_hist + nlcd_stat_hist:
+        if 'ori' in name:
+            labels.append('total_'+name.split('_')[-1])
+        else:
+            labels.append('low_oa_'+name.split('_')[-1])
+    create_bar_plot(nlcd_stats, nlcd_ori_hist + nlcd_stat_hist,
+                    bin_name_list,  # this is the tick name for different nlcd land type index
+                    title='plot of {} total area vs. low accuracy area'.format(data_name, tag),
+                    xlabel='land type',
+                    ylabel=ylabel,
+                    legend=True,
+                    labels=labels,
+                    figsize=(10, 6),
+                    fontsize=10,
+                    save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_compare.png').format(data_name)
+                    )
