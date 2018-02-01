@@ -117,10 +117,7 @@ for oa_array_path in oa_array_path_list:
             plt.title('plot of low oa elevation for {}'.format(model_name))
             plt.savefig(elev_stats_path+'_{}.png'.format(model_name))
 
-            # save low oa elevation as tif
-            array_to_raster(output_path=elev_stats_path+'_{}.tif'.format(model_name),
-                            source_path=elevation_path,
-                            array_data=elev_stat_grid)
+
         else:
             print'provide elevation file path !!'
     else:
@@ -170,46 +167,81 @@ for oa_array_path in oa_array_path_list:
         oa_result[np.isnan(oa_result)] = -999
         valid_grid_count = (oa_result != -999).sum()
         if os.path.isfile(slope_path):
-            # get low oa slope grid
+            # get slope grid and calculate original stats
             slope = gdalnumeric.LoadFile(slope_path)[0]
-            slope[slope < 0] = -999
+            slope[oa_result == -999] = -999
+
+            if 'slope_bin' not in slope_stats.columns:
+                hist, bin = np.histogram(slope, range=(0, 90), bins=9)
+                slope_stats['slope_pixel_ori'] = hist
+                slope_stats['slope_percent_ori'] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
+                slope_stats['slope_bin'] = [int(x) for x in bin[:-1]] # don't change the susbset, slope should not include 90 degree
+                slope_stats.to_csv(slope_stats_path + '.csv')
+
+            # get low oa slope stats
             low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
             slope_stat_grid = np.where(low_oa != -999, slope, -999)
             np.save(slope_stats_path + '_{}.npy'.format(model_name), slope_stat_grid)
 
-            # calculate low oa slope stats
             hist, bin = np.histogram(slope_stat_grid, range=(0, 90), bins=9)
             slope_stats['slope_pixel_{}'.format(model_name)] = hist
             slope_stats['slope_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
-            slope_stats['slope_bin'] = [int(x) for x in bin[1:]]
             slope_stats.to_csv(slope_stats_path + '.csv')
-
-            # make low oa slope plot
-            plt.clf()
-            plt.imshow(slope_stat_grid, interpolation='nearest')
-            plt.colorbar()
-            plt.title('plot of low oa slope for {}'.format(model_name))
-            plt.savefig(slope_stats_path + '_{}.png'.format(model_name))
 
             # save low oa slope as tif
             array_to_raster(output_path=slope_stats_path + '_{}.tif'.format(model_name),
                             source_path=slope_path,
                             array_data=slope_stat_grid)
+
+            # make low oa slope plot
+            plt.clf()
+            ma = np.ma.masked_equal(np.stack(slope_stat_grid), -999, copy=False)
+            plt.imshow(ma, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of low oa slope for {}'.format(model_name))
+            plt.savefig(slope_stats_path + '_{}.png'.format(model_name))
         else:
             print'provide slope file path !!'
     else:
         print 'provide oa array file path!!'
 
+
+# create  barplots for comparision
 for data_name, ylabel in zip(['slope_pixel', 'slope_percent'], ['pixel count', 'arae(%)']):
     slope_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
-    create_bar_plot(slope_stats, slope_stat_hist, slope_stats['slope_bin'].tolist(),
-                    title='plot of {}'.format(data_name),
-                    xlabel='slope (degree)',
+    slope_ori_hist = [data_name+'_ori']
+
+    # plot low oa stats (all models in one plot)
+    create_bar_plot(slope_stats, slope_stat_hist,
+                    slope_stats['slope_bin'].tolist(),
+                    title='plot of {} for low oa area'.format(data_name),
+                    xlabel='angle (degree)',
                     ylabel=ylabel,
                     legend=True,
-                    labels=model_name_list,
-                    save_path=os.path.join(terrain_stats_folder, 'slope_stats_barplot_of_{}.png').format(data_name)
+                    figsize=(8, 5),
+                    labels=['low_oa_'+name for name in model_name_list],
+                    save_path=os.path.join(terrain_stats_folder, 'slope_stats_barplot_of_{}_low_oa.png').format(data_name)
                     )
+
+    # plot comparison of low oa and original stats (all models in one plot)
+    labels = []
+    for name in slope_ori_hist + slope_stat_hist:
+        if 'ori' in name:
+            labels.append('total_area')
+        else:
+            labels.append('low_oa_'+name.split('_')[-1])
+
+    create_bar_plot(slope_stats, slope_ori_hist + slope_stat_hist,
+                    slope_stats['slope_bin'].tolist(),
+                    title='plot of {} for low OA area'.format(data_name),
+                    xlabel='angel (degree)',
+                    ylabel=ylabel,
+                    legend=True,
+                    labels=labels,
+                    figsize=(12, 6),
+                    save_path=os.path.join(terrain_stats_folder, 'slope_stats_barplot_of_{}_compare.png').format(data_name)
+                    )
+
 
 # step4 aspect stats ############################################################
 print 'step4: start aspect stats analysis'
@@ -278,7 +310,7 @@ for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count',
     # plot low oa stats (all models in one plot)
     create_bar_plot(aspect_stats, aspect_stat_hist,
                     ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
-                    title='plot of {}'.format(data_name),
+                    title='plot of {} for low OA area'.format(data_name),
                     xlabel='aspect (degree)',
                     ylabel=ylabel,
                     legend=True,
@@ -297,7 +329,7 @@ for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count',
 
     create_bar_plot(aspect_stats, aspect_ori_hist + aspect_stat_hist,
                     ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
-                    title='plot of {}'.format(data_name),
+                    title='plot of {} total area vs. low OA area'.format(data_name),
                     xlabel='aspect (degree)',
                     ylabel=ylabel,
                     legend=True,
@@ -406,7 +438,7 @@ for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'ar
     # plot low oa stats (all models in one plot)
     create_bar_plot(nlcd_stats, nlcd_stat_hist,
                     bin_name_list,  # this is the tick name for different nlcd index
-                    title='plot of {}'.format(data_name ),
+                    title='plot of {} for low OA area'.format(data_name ),
                     xlabel='land type',
                     ylabel=ylabel,
                     legend=True,
@@ -424,7 +456,7 @@ for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'ar
             labels.append('low_oa_'+name.split('_')[-1])
     create_bar_plot(nlcd_stats, nlcd_ori_hist + nlcd_stat_hist,
                     bin_name_list,  # this is the tick name for different nlcd land type index
-                    title='plot of {} total area vs. low accuracy area'.format(data_name),
+                    title='plot of {} total area vs. low OA area'.format(data_name),
                     xlabel='land type',
                     ylabel=ylabel,
                     legend=True,
