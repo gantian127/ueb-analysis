@@ -227,86 +227,91 @@ for oa_array_path in oa_array_path_list:
         oa_result[np.isnan(oa_result)] = -999
         valid_grid_count = (oa_result != -999).sum()
         if os.path.isfile(aspect_path):
-            # preprocess aspect with index and get stats
+            # get aspect grid and calculate original stats
             aspect = gdalnumeric.LoadFile(aspect_path)[0]
             aspect[oa_result == -999] = -999
             for bound, index in zip(range(0, 360, 45), range(1, 9)):
                 aspect[(aspect >= bound) & (aspect < bound+45)] = index
             np.save(aspect_stats_path + '_ori_index_{}.npy'.format(model_name), aspect)
 
-            hist, bin = np.histogram(aspect, range=(1, 8), bins=range(1, 10))  # np.unique(aspect_stat_grid,return_counts=True)
-            aspect_stats['aspect_pixel_ori_{}'.format(model_name)] = hist
-            aspect_stats['aspect_percent_ori_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
-            aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
-            aspect_stats.to_csv(aspect_stats_path + '.csv')
+            if 'aspect_bin' not in aspect_stats.columns:
+                hist, bin = np.histogram(aspect, range=(1, 8), bins=range(1, 10))
+                aspect_stats['aspect_pixel_ori'] = hist
+                aspect_stats['aspect_percent_ori'] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
+                aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
+                aspect_stats.to_csv(aspect_stats_path + '.csv')
 
             # get low oa aspect stats
             low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
             aspect_stat_grid = np.where(low_oa != -999, aspect, -999)
             np.save(aspect_stats_path + '_index_{}.npy'.format(model_name), aspect_stat_grid)
 
-            # preprocess grid and calculate low oa aspect stats
-            # for bound, index in zip(range(0, 360, 45), range(1, 9)):
-            #     aspect_stat_grid[(aspect_stat_grid >= bound) & (aspect_stat_grid < bound+45)] = index
-            # np.save(aspect_stats_path + '_index_{}.npy'.format(model_name), aspect_stat_grid)
-
-            hist, bin = np.histogram(aspect_stat_grid, range=(1, 8), bins=range(1, 10))  # np.unique(aspect_stat_grid,return_counts=True)
+            hist, bin = np.histogram(aspect_stat_grid, range=(1, 8), bins=range(1, 10))
             aspect_stats['aspect_pixel_{}'.format(model_name)] = hist
-            aspect_stats['aspect_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in
-                                                                    hist]
-            aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
+            aspect_stats['aspect_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
             aspect_stats.to_csv(aspect_stats_path + '.csv')
-
-            # make low oa aspect plot
-            plt.clf()
-            plt.imshow(aspect_stat_grid, interpolation='nearest')
-            plt.colorbar()
-            plt.title('plot of low oa aspect for {}'.format(model_name))
-            plt.savefig(aspect_stats_path + '_{}.png'.format(model_name))
 
             # save low oa aspect as tif
             array_to_raster(output_path=aspect_stats_path + '_{}.tif'.format(model_name),
                             source_path=aspect_path,
                             array_data=aspect_stat_grid)
+
+            # make low oa aspect 2d plot
+            plt.clf()
+            ma = np.ma.masked_equal(np.stack(aspect_stat_grid), -999, copy=False)
+            plt.imshow(ma, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of low oa aspect for {}'.format(model_name))
+            plt.savefig(aspect_stats_path + '_{}.png'.format(model_name))
+
         else:
             print'provide aspect file path !!'
     else:
         print 'provide oa array file path!!'
 
+
+# create  barplots for comparision
 for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count', 'arae(%)']):
     aspect_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
-    aspect_hist = [data_name+'_ori_{}'.format(model) for model in model_name_list]
-    for stat_hist,tag in zip([aspect_stat_hist, aspect_hist], ['final', 'ori']):
-        create_bar_plot(aspect_stats, stat_hist,
-                        ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
-                        title='plot of {} {}'.format(data_name,tag),
-                        xlabel='aspect (degree)',
-                        ylabel=ylabel,
-                        legend=True,
-                        labels=model_name_list,
-                        save_path=os.path.join(terrain_stats_folder, 'aspect_stats_barplot_of_{}_{}.png').format(data_name, tag)
-                        )
+    aspect_ori_hist = [data_name+'_ori']
 
-    create_bar_plot(aspect_stats, aspect_hist+aspect_stat_hist,
+    # plot low oa stats (all models in one plot)
+    create_bar_plot(aspect_stats, aspect_stat_hist,
                     ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
-                    title='plot of {} {}'.format(data_name,tag),
+                    title='plot of {}'.format(data_name),
                     xlabel='aspect (degree)',
                     ylabel=ylabel,
                     legend=True,
-                    # labels=model_name_list,
-                    figsize=(10, 6),
-                    save_path=os.path.join(terrain_stats_folder, 'aspect_stats_barplot_of_{}_mix.png').format(data_name)
+                    figsize=(8, 5),
+                    labels=['low_oa_'+name for name in model_name_list],
+                    save_path=os.path.join(terrain_stats_folder, 'aspect_stats_barplot_of_{}_low_oa.png').format(data_name)
+                    )
+
+    # plot comparison of low oa and original stats (all models in one plot)
+    labels = []
+    for name in aspect_ori_hist + aspect_stat_hist:
+        if 'ori' in name:
+            labels.append('total_area')
+        else:
+            labels.append('low_oa_'+name.split('_')[-1])
+
+    create_bar_plot(aspect_stats, aspect_ori_hist + aspect_stat_hist,
+                    ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],  # this is the tick name for different aspect index
+                    title='plot of {}'.format(data_name),
+                    xlabel='aspect (degree)',
+                    ylabel=ylabel,
+                    legend=True,
+                    labels=labels,
+                    figsize=(12, 6),
+                    save_path=os.path.join(terrain_stats_folder, 'aspect_stats_barplot_of_{}_compare.png').format(data_name)
                     )
 
 
 # step5 land cover stats ############################################################
 print 'step5: start land cover stats analysis'
-bin_number = 6
-scale = 100
 
 nlcd_stats = pd.DataFrame()
 nlcd_stats_path = os.path.join(terrain_stats_folder, 'nlcd_stats_low_oa')
-nlcd_stat_grid_list = []
 model_name_list = []
 
 nlcd_type_dict = {
@@ -343,11 +348,12 @@ for oa_array_path in oa_array_path_list:
             nlcd = gdalnumeric.LoadFile(nlcd_path)[0].astype('Int16')
             nlcd[oa_result == -999] = -999
 
-            bin, hist = np.unique(nlcd, return_counts=True)
-            nlcd_stats['nlcd_pixel_ori_{}'.format(model_name)] = hist[1:]
-            nlcd_stats['nlcd_percent_ori_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist[1:]]
-            nlcd_stats['nlcd_bin'] = [int(x) for x in bin[1:]]  # don't change the bin list subset as the first value is -999!!
-            nlcd_stats.to_csv(nlcd_stats_path + '.csv')
+            if 'nlcd_bin' not in nlcd_stats.columns:
+                bin, hist = np.unique(nlcd, return_counts=True)
+                nlcd_stats['nlcd_pixel_ori'] = hist[1:]
+                nlcd_stats['nlcd_percent_ori'] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist[1:]]
+                nlcd_stats['nlcd_bin'] = [int(x) for x in bin[1:]]  # don't change the bin list subset as the first value is -999!!
+                nlcd_stats.to_csv(nlcd_stats_path + '.csv')
 
             # get low oa nlcd stats
             low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
@@ -357,7 +363,7 @@ for oa_array_path in oa_array_path_list:
             raw_bin, raw_hist = np.unique(nlcd_stat_grid, return_counts=True)
             raw_bin = raw_bin.tolist()
             raw_hist = raw_hist.tolist()
-            new_hist = []
+            new_hist = []  # this is to make sure the low oa stats has the same length as the original hist length
             for index in bin:
                 if index in raw_bin:
                     new_hist.append(raw_hist[raw_bin.index(index)])
@@ -366,20 +372,21 @@ for oa_array_path in oa_array_path_list:
 
             nlcd_stats['nlcd_pixel_{}'.format(model_name)] = new_hist[1:]
             nlcd_stats['nlcd_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in new_hist[1:]]
-            nlcd_stats['nlcd_bin'] = [int(x) for x in bin[1:]]  # don't change the bin list subset as the last value is 9!!
+            # nlcd_stats['nlcd_bin'] = [int(x) for x in bin[1:]]
             nlcd_stats.to_csv(nlcd_stats_path + '.csv')
-
-            # make low oa nlcd plot
-            plt.clf()
-            plt.imshow(nlcd_stat_grid, interpolation='nearest')
-            plt.colorbar()
-            plt.title('plot of low oa nlcd for {}'.format(model_name))
-            plt.savefig(nlcd_stats_path + '_{}.png'.format(model_name))
 
             # save low oa nlcd as tif
             array_to_raster(output_path=nlcd_stats_path + '_{}.tif'.format(model_name),
                             source_path=nlcd_path,
                             array_data=nlcd_stat_grid)
+
+            # make low oa nlcd 2d plot
+            plt.clf()
+            ma = np.ma.masked_equal(np.stack(nlcd_stat_grid), -999, copy=False)
+            plt.imshow(ma, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of low oa nlcd for {}'.format(model_name))
+            plt.savefig(nlcd_stats_path + '_{}.png'.format(model_name))
         else:
             print'provide nlcd file path !!'
 
@@ -394,7 +401,7 @@ for index in nlcd_stats['nlcd_bin'].tolist():
 
 for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'arae(%)']):
     nlcd_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
-    nlcd_ori_hist = [data_name+'_ori_{}'.format(model) for model in model_name_list]
+    nlcd_ori_hist = [data_name+'_ori']
 
     # plot low oa stats (all models in one plot)
     create_bar_plot(nlcd_stats, nlcd_stat_hist,
@@ -412,12 +419,12 @@ for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'ar
     labels = []
     for name in nlcd_ori_hist + nlcd_stat_hist:
         if 'ori' in name:
-            labels.append('total_'+name.split('_')[-1])
+            labels.append('total_area')
         else:
             labels.append('low_oa_'+name.split('_')[-1])
     create_bar_plot(nlcd_stats, nlcd_ori_hist + nlcd_stat_hist,
                     bin_name_list,  # this is the tick name for different nlcd land type index
-                    title='plot of {} total area vs. low accuracy area'.format(data_name, tag),
+                    title='plot of {} total area vs. low accuracy area'.format(data_name),
                     xlabel='land type',
                     ylabel=ylabel,
                     legend=True,
