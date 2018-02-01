@@ -100,6 +100,7 @@ for oa_array_path in oa_array_path_list:
         model_name_list.append(model_name)
         oa_result = np.load(oa_array_path)
         oa_result[np.isnan(oa_result)] = -999
+        valid_grid_count = (oa_result != -999).sum()
         if os.path.isfile(elevation_path):
             # get low oa elevation grid
             elev = gdalnumeric.LoadFile(elevation_path)[0]
@@ -136,7 +137,7 @@ step = ((end-start)/(scale*bin_number)+1)*scale
 for elev_stat_grid, model_name in zip(elev_stat_grid_list, model_name_list):
     hist, bin = np.histogram(elev_stat_grid, range=(start, end), bins=range(start, end+step, step))
     elev_stats['elev_pixel_{}'.format(model_name)] = hist
-    elev_stats['elev_percent_{}'.format(model_name)] = [round(float(x)*100/hist.sum(), 1) for x in hist]
+    elev_stats['elev_percent_{}'.format(model_name)] = [round(float(x)*100/valid_grid_count, 1) for x in hist]
     elev_stats['elev_bin'] = bin[:-1]
     elev_stats.to_csv(elev_stats_path+'.csv')
 
@@ -167,6 +168,7 @@ for oa_array_path in oa_array_path_list:
         model_name_list.append(model_name)
         oa_result = np.load(oa_array_path)
         oa_result[np.isnan(oa_result)] = -999
+        valid_grid_count = (oa_result != -999).sum()
         if os.path.isfile(slope_path):
             # get low oa slope grid
             slope = gdalnumeric.LoadFile(slope_path)[0]
@@ -178,7 +180,7 @@ for oa_array_path in oa_array_path_list:
             # calculate low oa slope stats
             hist, bin = np.histogram(slope_stat_grid, range=(0, 90), bins=9)
             slope_stats['slope_pixel_{}'.format(model_name)] = hist
-            slope_stats['slope_percent_{}'.format(model_name)] = [round(float(x) * 100 / hist.sum(), 1) for x in hist]
+            slope_stats['slope_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
             slope_stats['slope_bin'] = [int(x) for x in bin[1:]]
             slope_stats.to_csv(slope_stats_path + '.csv')
 
@@ -223,6 +225,7 @@ for oa_array_path in oa_array_path_list:
         model_name_list.append(model_name)
         oa_result = np.load(oa_array_path)
         oa_result[np.isnan(oa_result)] = -999
+        valid_grid_count = (oa_result != -999).sum()
         if os.path.isfile(aspect_path):
             # preprocess aspect with index and get stats
             aspect = gdalnumeric.LoadFile(aspect_path)[0]
@@ -233,7 +236,7 @@ for oa_array_path in oa_array_path_list:
 
             hist, bin = np.histogram(aspect, range=(1, 8), bins=range(1, 10))  # np.unique(aspect_stat_grid,return_counts=True)
             aspect_stats['aspect_pixel_ori_{}'.format(model_name)] = hist
-            aspect_stats['aspect_percent_ori_{}'.format(model_name)] = [round(float(x) * 100 / hist.sum(), 1) for x in hist]
+            aspect_stats['aspect_percent_ori_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist]
             aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
             aspect_stats.to_csv(aspect_stats_path + '.csv')
 
@@ -249,7 +252,7 @@ for oa_array_path in oa_array_path_list:
 
             hist, bin = np.histogram(aspect_stat_grid, range=(1, 8), bins=range(1, 10))  # np.unique(aspect_stat_grid,return_counts=True)
             aspect_stats['aspect_pixel_{}'.format(model_name)] = hist
-            aspect_stats['aspect_percent_{}'.format(model_name)] = [round(float(x) * 100 / hist.sum(), 1) for x in
+            aspect_stats['aspect_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in
                                                                     hist]
             aspect_stats['aspect_bin'] = [int(x) for x in bin[:-1]]  # don't change the bin list subset as the last value is 9!!
             aspect_stats.to_csv(aspect_stats_path + '.csv')
@@ -296,5 +299,120 @@ for data_name, ylabel in zip(['aspect_pixel', 'aspect_percent'], ['pixel count',
                     )
 
 
-
 # step5 land cover stats ############################################################
+print 'step5: start land cover stats analysis'
+bin_number = 6
+scale = 100
+
+nlcd_stats = pd.DataFrame()
+nlcd_stats_path = os.path.join(terrain_stats_folder, 'nlcd_stats_low_oa')
+nlcd_stat_grid_list = []
+model_name_list = []
+
+nlcd_type_dict = {
+    11: 'water',
+    12: 'perennial ice snow',
+    21: 'developed open space',
+    22: 'developed Low intensity',
+    23: 'developed medium intensity',
+    24: 'developed high intensity',
+    31: 'bare rock',
+    41: 'deciduous forest',
+    42: 'evergreen forest',
+    43: 'mixed forest',
+    52: 'shrub',
+    71: 'grasslands',
+    81: 'pasture',
+    82: 'cultivated Crops',
+    90: 'woody wetlands',
+    95: 'emergent herbaceous wetlands',
+}   # https://www.mrlc.gov/nlcd11_stat.php
+
+# get low oa nlcd grid tif and png file
+for oa_array_path in oa_array_path_list:
+    if os.path.isfile(oa_array_path):
+        model_name = os.path.basename(oa_array_path).split('_')[1]
+        model_name_list.append(model_name)
+        oa_result = np.load(oa_array_path)
+        oa_result[np.isnan(oa_result)] = -999
+        valid_grid_count = (oa_result != -999).sum()
+        if os.path.isfile(nlcd_path):
+            # get nlcd grid and calculate stats
+            nlcd = gdalnumeric.LoadFile(nlcd_path)[0].astype('Int16')
+            nlcd[oa_result == -999] = -999
+
+            bin, hist = np.unique(nlcd, return_counts=True)
+            nlcd_stats['nlcd_pixel_ori_{}'.format(model_name)] = hist[1:]
+            nlcd_stats['nlcd_percent_ori_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in hist[1:]]
+            nlcd_stats['nlcd_bin'] = [int(x) for x in bin[1:]]  # don't change the bin list subset as the first value is -999!!
+            nlcd_stats.to_csv(nlcd_stats_path + '.csv')
+
+            # get low oa nlcd stats
+            low_oa = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
+            nlcd_stat_grid = np.where(low_oa != -999, nlcd, -999)
+            np.save(nlcd_stats_path + '_{}.npy'.format(model_name), nlcd_stat_grid)
+
+            raw_bin, raw_hist = np.unique(nlcd_stat_grid, return_counts=True)
+            raw_bin = raw_bin.tolist()
+            raw_hist = raw_hist.tolist()
+            new_hist = []
+            for index in bin:
+                if index in raw_bin:
+                    new_hist.append(raw_hist[raw_bin.index(index)])
+                else:
+                    new_hist.append(0)
+
+            nlcd_stats['nlcd_pixel_{}'.format(model_name)] = new_hist[1:]
+            nlcd_stats['nlcd_percent_{}'.format(model_name)] = [round(float(x) * 100 / valid_grid_count, 1) for x in new_hist[1:]]
+            nlcd_stats['nlcd_bin'] = [int(x) for x in bin[1:]]  # don't change the bin list subset as the last value is 9!!
+            nlcd_stats.to_csv(nlcd_stats_path + '.csv')
+
+            # make low oa nlcd plot
+            plt.clf()
+            plt.imshow(nlcd_stat_grid, interpolation='nearest')
+            plt.colorbar()
+            plt.title('plot of low oa nlcd for {}'.format(model_name))
+            plt.savefig(nlcd_stats_path + '_{}.png'.format(model_name))
+
+            # save low oa nlcd as tif
+            array_to_raster(output_path=nlcd_stats_path + '_{}.tif'.format(model_name),
+                            source_path=nlcd_path,
+                            array_data=nlcd_stat_grid)
+        else:
+            print'provide nlcd file path !!'
+
+bin_names_list = []
+for index in nlcd_stats['nlcd_bin'].tolist():
+    full_name = nlcd_type_dict[index]
+    simple_name = ''.join([name[0].upper() for name in full_name.split()])
+    bin_names_list.append(simple_name)
+
+for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'arae(%)']):
+    nlcd_stat_hist = [data_name + '_{}'.format(model) for model in model_name_list]
+    nlcd_hist = [data_name+'_ori_{}'.format(model) for model in model_name_list]
+
+    for stat_hist, tag in zip([nlcd_stat_hist, nlcd_hist], ['final', 'ori']):
+        create_bar_plot(nlcd_stats, stat_hist,
+                        bin_names_list,  # this is the tick name for different nlcd index
+                        title='plot of {} {}'.format(data_name,tag),
+                        xlabel='land type',
+                        ylabel=ylabel,
+                        legend=True,
+                        labels=model_name_list,
+                        save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_{}.png').format(data_name, tag)
+                        )
+    create_bar_plot(nlcd_stats, nlcd_hist + nlcd_stat_hist,
+                    bin_names_list,  # this is the tick name for different nlcd index
+                    title='plot of {} {}'.format(data_name, tag),
+                    xlabel='land type',
+                    ylabel=ylabel,
+                    legend=True,
+                    # labels=model_name_list,
+                    figsize=(10, 6),
+                    save_path=os.path.join(terrain_stats_folder, 'nlcd_stats_barplot_of_{}_mix.png').format(
+                        data_name)
+                    )
+
+        # ToDo:  remove water
+        # TODo: for other analysis, make compare plots of original and low oa histogram
+        # Todo: label of the compare plot
