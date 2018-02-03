@@ -15,6 +15,7 @@ import os
 import subprocess
 import shlex
 import numpy as np
+import shutil
 
 import pandas as pd
 import gdalnumeric
@@ -136,7 +137,7 @@ if os.path.isdir(modis_proj_folder):
     modis_func = '((A>={})*(A<=100)+-999*(A==250))'.format(modis_threshold)  # when there is cloud, assign as no data values
     for time in valid_date.index:
         modis_proj_path = valid_date['modis_proj_folder'].ix[time]
-        modis_bin_name = os.path.basename(modis_proj_path).replace('_proj', '_bin')
+        modis_bin_name = os.path.basename(modis_proj_path).replace('_clip', '_bin')
         modis_bin_path = os.path.join(modis_bin_folder, modis_bin_name)
         cmd_modis_bin = 'gdal_calc.py -A {} --calc="{}" --outfile={} --NoDataValue=-999 --type=Int16'.format(modis_proj_path, modis_func, modis_bin_path)
 
@@ -145,6 +146,39 @@ if os.path.isdir(modis_proj_folder):
             valid_date[bin_col_name].ix[time] = modis_bin_path
         except Exception as e:
             continue
+
+        # fill cloud cover area by interpolation
+        modis_proj_array = gdalnumeric.LoadFile(modis_proj_path)
+        cloud_cover_pixel = (modis_proj_array[0] == 250).sum()
+        if cloud_cover_pixel > 0:
+            from snow_cover_utility import create_bar_plot, array_to_raster
+            for i in range(10):
+                cmd_interp_bin = 'gdal_fillnodata.py -md 2 {} {}'.format(modis_bin_path, modis_bin_path)
+
+                try:
+                    subprocess.call(shlex.split(cmd_interp_bin))
+                except Exception as e:
+                    valid_date[bin_col_name].ix[time] = ''
+                    continue
+
+                modis_bin_array = gdalnumeric.LoadFile(modis_bin_path)
+                mask = np.ma.masked_where(modis_proj_array[1] == 0, modis_bin_array)  # remember to use the proj tif 2nd layer as the mask for binary tif creation
+                cloud_cover_pixel = (mask == -999).sum()
+                if cloud_cover_pixel == 0:
+                    break
+
+            if cloud_cover_pixel > 0:
+                valid_date.drop(time)
+                print 'drop bin file at {}'.format(modis_bin_path)
+            else:
+                print modis_bin_path
+                print os.path.isfile(modis_bin_path)
+                os.remove(modis_bin_path)
+                new_bin_array = np.where(modis_proj_array[1] != 0, modis_bin_array, -999)
+                array_to_raster(output_path=modis_bin_path,
+                                source_path=modis_proj_path,
+                                array_data=new_bin_array)
+                print 'cloud cover interpolation for {}'.format(modis_bin_path)
 
     valid_date.to_csv(valid_date_path)
     print 'modis binary file is done'
