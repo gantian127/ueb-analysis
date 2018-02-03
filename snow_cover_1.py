@@ -38,7 +38,7 @@ print 'step1: get snow date info'
 # user settings
 swe_ts_snow17 = 'DRGC2_we_snow17.ts'
 swe_ts_ueb = ''#'DRGC2_we_ueb.ts'
-snow_threshold = 10
+# snow_threshold = 0
 start_time = '2006-10-01'
 end_time = '2007-9-30'
 
@@ -49,14 +49,16 @@ col_name = []
 
 if swe_ts_snow17:
     snow17_df = get_sim_dataframe(swe_ts_snow17, sim_skip=136, start_time=start_time, end_time=end_time)
-    snow17_snow_date = snow17_df[snow17_df >= snow_threshold]
-    concat.append(snow17_snow_date)
+    # snow17_snow_date = snow17_df[snow17_df > 0]
+    # concat.append(snow17_snow_date)
+    concat.append(snow17_df)
     col_name.append('snow17_swe')
 
 if swe_ts_ueb:
     ueb_df = get_sim_dataframe(swe_ts_ueb, sim_skip=136, start_time=start_time, end_time=end_time)
-    ueb_snow_date = ueb_df[ueb_df >= snow_threshold]
-    concat.append(ueb_snow_date)
+    # ueb_snow_date = ueb_df[ueb_df > 0]
+    # concat.append(ueb_snow_date)
+    concat.append(ueb_df)
     col_name.append('ueb_swe')
 
 if concat:
@@ -72,7 +74,7 @@ else:
 print 'step2: get modis data with snow'
 
 # user settings
-modis_gz_folder = r'/Projects/snow_fraction/'  # this is the folder that stores the original .gz data
+modis_gz_folder = r'/Projects/snow_fraction_canadj/'  # this is the folder that stores the original .gz data
 modis_snowdate_folder = os.path.join(result_folder, 'modis_snowdate_folder')  #  folder that stores the modis with snow
 
 # create tif folder:
@@ -88,7 +90,8 @@ snow_date[col_name] = np.nan
 for time in snow_date.index:
     year = str(time.year)
     day = '{:03d}'.format(time.dayofyear)
-    gz_name = 'modscag.snow_fraction.{}.{}.mosaic.tif.gz'.format(year, day)
+    # gz_name = 'modscag.snow_fraction.{}.{}.mosaic.tif.gz'.format(year, day)
+    gz_name = 'modscag.snow_fraction_canadj.{}.{}.mosaic.tif.gz'.format(year, day)
     gz_path = os.path.join(modis_gz_folder, year, day, gz_name)
     modis_tif_path = os.path.join(modis_snowdate_folder, gz_name[:-3])
 
@@ -99,10 +102,8 @@ for time in snow_date.index:
                 outf.write(content)
         snow_date[col_name].ix[time] = modis_tif_path
     except Exception as e:
+        print 'failed to unzip modis data!!'
         continue
-
-print 'unzip modis .gz is done'
-
 
 # step3 swe: unzip .gz file to assigned folder ####################################
 print 'step3: get swe data with snow'
@@ -140,5 +141,5 @@ for i in range(0, len(swe_gz_folders)):
             continue
     snow_date.to_csv(model_snow_date_path)
 
-print 'unzip swe .gz is done'
+print 'snow_cover_1: unzip files is done'
 

@@ -4,7 +4,8 @@ This is the formal script for snow cover area analysis
 step3:  calculate cloud cover -> get valid modis and swe data to create binary files
 
 step:
-- calculate cloud cover
+- calculate cloud cover and snow grid count for modis
+- get valid snow date: snow17, ueb or modis has snow (>0m or 0%) and modis cloud cover less than threshold
 - create swe binary
 - create modis binary
 
@@ -46,8 +47,9 @@ print 'step1: calculate cloud cover '
 # load data
 snow_date = pd.DataFrame.from_csv(model_snow_date_path, header=0)
 snow_date['modis_cloud_cover'] = ''
+snow_date['modis_snow_count'] = ''
 
-# calculate the modis cloud cover
+# calculate the modis cloud cover and check whether it has snow
 for time in snow_date.index:
     modis_proj_path = snow_date['modis_proj_folder'].ix[time]
     if os.path.isfile(modis_proj_path):
@@ -56,26 +58,34 @@ for time in snow_date.index:
             cloud_count = (raster[0] == 250).sum()
             total_count = raster.shape[1] * raster.shape[2]
             nodata_count = (raster[0] == 255).sum()
+            snow_count = ((raster[0] >= modis_threshold) & (raster[0] <= 100)).sum()
             cloud_cover = float(cloud_count) / (total_count - nodata_count)
             snow_date['modis_cloud_cover'].ix[time] = cloud_cover
-
+            snow_date['modis_snow_count'].ix[time] = snow_count
         except Exception as e:
             continue
 
 snow_date.to_csv(model_snow_date_path)
-print 'cloud cover calculation is done'
 
 
-
-
-# get valid date #######################################################################
+# step2: get valid date #######################################################################
+# this is to find the date that snow17, ueb or modis has snow (>0m or 0%) and modis cloud cover less than threshold
+print ' step 2 get valid date'
 snow_date = pd.DataFrame.from_csv(model_snow_date_path, header=0)
-valid_date = snow_date[snow_date['modis_cloud_cover'] <= cloud_threshold]
+modis_date = snow_date[(snow_date['modis_snow_count'] > 0)].index
+
+for model_swe in ['snow17_swe', 'ueb_swe']:
+    if model_swe in snow_date.columns:
+        swe_date = snow_date[snow_date[model_swe] > 0].index
+        modis_date = modis_date.union(swe_date)
+
+valid_date = snow_date.ix[modis_date][snow_date['modis_cloud_cover'] <= cloud_threshold]
+
 valid_date.to_csv(valid_date_path)
 
 
-# step2: create binary grid ##############################################################
-print 'step2 create swe binary'
+# step3: create binary grid ##############################################################
+print 'step3 create swe binary'
 
 # load data
 valid_date = pd.DataFrame.from_csv(valid_date_path, header=0)
@@ -107,11 +117,9 @@ for swe_proj_folder in swe_proj_folders:
 
         valid_date.to_csv(valid_date_path)
 
-print 'swe binary file is done'
 
-
-# step3  create modis binary file  ##################################################################################
-print 'step3 create modis bianry file'
+# step4  create modis binary file  ##################################################################################
+print 'step4 create modis bianry file'
 
 valid_date = pd.DataFrame.from_csv(valid_date_path, header=0)
 
@@ -143,3 +151,5 @@ if os.path.isdir(modis_proj_folder):
 
 else:
     print 'failed to create modis binary file'
+
+print 'snow_cover_3: swe and modis binary file is done'

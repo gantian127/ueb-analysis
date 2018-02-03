@@ -9,7 +9,7 @@ requirements:
 
 step:
 - create 30m slope, aspect, land cover data
-- reproject and clip using template raster
+- reproject and clip terrain data using template raster
 
 """
 
@@ -124,4 +124,4 @@ for tif_name in tif_names:
         except Exception as e:
             continue
 
-print 'modis reprojection, clip, resample is done'
+print 'snow_cover_5: terrain data reprojection, clip, resample is done'

@@ -7,7 +7,7 @@ requirements:
 - make sure all other scripts are executed.
 
 step:
-- OA stats: area coverage distribution of different oa values
+- OA stats and low oa grid
 - elevation vs low OA stats:
 - slope vs low OA stats
 - aspect vs low OA stats
@@ -27,7 +27,7 @@ from snow_cover_utility import create_bar_plot, array_to_raster
 
 # User settings #############################################################
 # low oa threshold
-low_oa_threshold = 0.7
+low_oa_threshold = 0.8
 
 # file and folders created before
 watershed = 'animas'
@@ -53,11 +53,13 @@ if not os.path.isdir(terrain_stats_folder):
 print 'step1: start oa stats analysis'
 oa_stats = pd.DataFrame()
 oa_stats_path = os.path.join(terrain_stats_folder, 'oa_stats.csv')
+low_oa_path = os.path.join(terrain_stats_folder, 'low_oa_grid')
 model_name_list = []
 
-# get oa stats
+# get oa stats and create low oa grid
 for oa_array_path in oa_array_path_list:
     if os.path.isfile(oa_array_path):
+        # get oa stats
         model_name = os.path.basename(oa_array_path).split('_')[1]
         model_name_list.append(model_name)
         oa_result = np.load(oa_array_path)
@@ -68,6 +70,23 @@ for oa_array_path in oa_array_path_list:
         oa_stats['oa_percent_{}'.format(model_name)] = hist_percent
         oa_stats['oa_bin'] = bin[1:]
         oa_stats.to_csv(oa_stats_path)
+
+        # create low oa grid
+        low_oa_grid = np.where(((oa_result <= low_oa_threshold) & (oa_result >= 0)), oa_result, -999)
+
+        # save low oa slope as tif
+        array_to_raster(output_path=low_oa_path + '_{}.tif'.format(model_name),
+                        source_path=oa_array_path.replace('.npy', '.tif'),
+                        array_data=low_oa_grid)
+
+        # make low oa elev plot
+        plt.clf()
+        ma = np.ma.masked_equal(low_oa_grid, -999, copy=False)
+        plt.imshow(ma, interpolation='nearest')
+        plt.colorbar()
+        plt.title('plot of low oa elev for {}'.format(model_name))
+        plt.savefig(low_oa_path + '_{}.png'.format(model_name))
+
     else:
         print 'please provide oa array file !!'
 
@@ -78,6 +97,7 @@ for name, ylabel in zip(['oa_pixel', 'oa_percent'], ['pixel count', 'arae(%)']):
                     xlabel='overall accuracy',
                     ylabel=ylabel,
                     legend=True,
+                    legend_loc=2,
                     labels=model_name_list,
                     save_path=os.path.join(terrain_stats_folder, 'oa_stats_barplot_of_{}.png').format(name)
                     )
@@ -500,4 +520,4 @@ for data_name, ylabel in zip(['nlcd_pixel', 'nlcd_percent'], ['pixel count', 'ar
                     )
 
 
-print 'terrain analysis is done!'
+print 'snow_cover_6: terrain analysis is done!'

@@ -4,8 +4,8 @@ This is the formal script for snow cover area analysis
 step2: process modis and swe with same projection and resolution
 
 step:
-- reproject swe
-- copy and unzip swe .gz file
+- swe: xmrg -> tif -> reproject
+- modis: reproject -> clip -> resample
 
 """
 
@@ -129,4 +129,4 @@ for time in snow_date.index:
 
 snow_date.to_csv(model_snow_date_path)
 
-print 'modis reprojection, clip, resample is done'
+print 'snow_cover_2: swe, modis reprojection, clip, resample is done'

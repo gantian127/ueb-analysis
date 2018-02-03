@@ -7,6 +7,8 @@ requirements:
 - make sure snow_cover_1.py, snow_cover_2.py snow_cover_3.py is executed.
 
 step:
+- calculate percent snow
+- refine the valid date
 - calculate area based stats
 - calculate pixel based stats
 
@@ -37,8 +39,7 @@ valid_date_path = os.path.join(stats_folder, 'valid_date.csv')
 # reprojection info
 proj4_string = '+proj=stere +lat_0=90.0 +lat_ts=60.0 +lon_0=-105.0 +k=1 +x_0=0.0 +y_0=0.0 +a=6371200 +b=6371200 +units=m +no_defs'  # polar stereographic
 
-
-# step 1 calculate area stats ################################################
+# step 1 get percent snow info for model and modis ################################################
 print 'step1: calculate area stats'
 
 # calculate area based stats
@@ -71,7 +72,27 @@ for bin_folder in cal_folders:
         area_stats.to_csv(os.path.join(stats_folder, '{}_area_stats.csv'.format(bin_col_name)))
         valid_date.to_csv(valid_date_path)
 
-# TODO need to export as text.
+
+# step 2 refine valid date ##################################################
+print 'step2: refine valide date'
+
+# This is to make sure that the percent snow for snow17, ueb, modis should at least one of them larger than 0
+valid_date = pd.DataFrame.from_csv(valid_date_path, header=0)
+valid_date_index = valid_date[valid_date['percent_snow_modis_bin_folder'] > 0].index
+
+for model_percent_snow in ['percent_snow_snow17_bin_folder', 'percent_snow_ueb_bin_folder']:
+    if model_percent_snow in valid_date.columns:
+        swe_date_index = valid_date[valid_date[model_percent_snow] > 0].index
+        valid_date_index = valid_date_index.union(swe_date_index)
+
+valid_date = valid_date.ix[valid_date_index]
+valid_date.to_csv(valid_date_path)
+
+
+# step 3 calculate area based stats ##################################################
+print 'step3: calculate area stats'
+
+valid_date = pd.DataFrame.from_csv(valid_date_path, header=0)
 result = []
 for bin_folder in swe_bin_folders:
     if os.path.isdir(bin_folder):
@@ -83,11 +104,9 @@ with open(os.path.join(stats_folder, 'area_stat_results.txt'), 'w') as f:
     for item in result:
         f.write("%s\n" % item)
 
-print 'area stats is done'
 
-
-# step 2: calculate pixel based stats #########################################
-
+# step 4: calculate pixel based stats #########################################
+print 'step4: calculate pixel based stats'
 valid_date = pd.DataFrame.from_csv(valid_date_path, header=0)
 
 for swe_bin_folder in swe_bin_folders:
@@ -165,4 +184,4 @@ for swe_bin_folder in swe_bin_folders:
                                 array_data=data)
 
 
-print 'oa calculate is done'
+print 'snow_cover_4: oa calculate is done'
