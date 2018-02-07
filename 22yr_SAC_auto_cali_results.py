@@ -63,7 +63,7 @@ with open('./analysis/ranks.csv', 'wb') as ranks:
     for i in range(0, len(stat_names)):
         wr.writerow(['{}'.format(stat_names[i])])
         a = option_list[1:]
-        if start_name[i] == 'bias':
+        if stat_names[i] == 'bias':
             a = [abs(x) for x in a]
 
         a.sort(key=lambda pair: pair[i], reverse=False if stat_names[i] in ['mae', 'rmse', 'bias'] else True)
