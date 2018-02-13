@@ -47,7 +47,7 @@ for swe_xmrg_folder in swe_snowdate_folders:
         # create projection folder and dataframe column
         xmrg_col_name = os.path.basename(swe_xmrg_folder)
         proj_col_name = os.path.basename(swe_xmrg_folder).replace('snowdate', 'proj')
-        snow_date[proj_col_name] = ''
+        snow_date[proj_col_name] = 'invalid'
         swe_proj_folder = os.path.join(result_folder, proj_col_name)
 
         if not os.path.isdir(swe_proj_folder):
@@ -63,12 +63,17 @@ for swe_xmrg_folder in swe_snowdate_folders:
                 cmd_xmrgtoasc = 'xmrgtoasc -i {} -p ster -n -999'.format(swe_xmrg_path)
                 cmd_reproj = 'gdalwarp -overwrite -t_srs "{}" {} {}'.format(proj4_string, swe_tif_path, swe_proj_path)
 
-                try:
-                    for command in [cmd_xmrgtoasc, cmd_reproj]:
-                        result1 = subprocess.call(shlex.split(command))
+                if not os.path.isfile(swe_proj_path):
+                    try:
+                        for command in [cmd_xmrgtoasc, cmd_reproj]:
+                            result1 = subprocess.call(shlex.split(command))
+                        snow_date[proj_col_name].ix[time] = swe_proj_path
+                    except Exception as e:
+                        print 'failed to reproject model swe!'
+                        print swe_xmrg_path
+                        continue
+                else:
                     snow_date[proj_col_name].ix[time] = swe_proj_path
-                except Exception as e:
-                    continue
 
         snow_date.to_csv(model_snow_date_path)
     else:
@@ -108,7 +113,7 @@ except Exception as e:
 # reprojection and clip
 tif_col_name = os.path.basename(modis_snowdate_folder)
 proj_col_name = tif_col_name.replace('snowdate','proj')
-snow_date[proj_col_name] = ''
+snow_date[proj_col_name] = 'invalid'
 
 for time in snow_date.index:
     modis_tif_path = snow_date[tif_col_name].ix[time]
@@ -116,19 +121,23 @@ for time in snow_date.index:
         modis_proj_path = modis_tif_path[:-4]+'_proj.tif'
         modis_clip_name = os.path.basename(modis_proj_path).replace('_proj.tif', '_clip.tif')
         modis_clip_path = os.path.join(modis_proj_folder, modis_clip_name)
+
         if not os.path.isfile(modis_proj_path):
             cmd_reproj = 'gdalwarp -overwrite -t_srs "{}" -tr 463 463 {} {}'.format(proj4_string, modis_tif_path, modis_proj_path)
         else:
             cmd_reproj = ''
         cmd_clip = "gdalwarp -overwrite -ts {} {} -cutline {} -crop_to_cutline -dstalpha {} {}".format(x_size, y_size, clipper_file_path, modis_proj_path, modis_clip_path)
 
-        try:
-            for command in [cmd_reproj, cmd_clip]:
-                if command:
-                    subprocess.call(shlex.split(command))
+        if not os.path.isfile(modis_clip_path):
+            try:
+                for command in [cmd_reproj, cmd_clip]:
+                    if command:
+                        subprocess.call(shlex.split(command))
+                snow_date[proj_col_name].ix[time] = modis_clip_path
+            except Exception as e:
+                continue
+        else:
             snow_date[proj_col_name].ix[time] = modis_clip_path
-        except Exception as e:
-            continue
 
 snow_date.to_csv(model_snow_date_path)
 
