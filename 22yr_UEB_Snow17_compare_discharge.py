@@ -12,16 +12,23 @@ import os
 from plot_SAC_utility import *
 
 sim_file_list = [
-                 'DRGC2_discharge_outlet_22yr.ts',
-                 'DRGC2_discharge_outlet_28559.ts',
+                 'DRGC2_discharge_outlet_22yr.ts',  # use Paul original parameter to run 22yr
+                 'DRGC2_discharge_outlet_RTI_snow17.ts',  # Paul snow17 workflow results
+                 # 'DRGC2_discharge_outlet_28560.ts',  # this is 1st Paul repeat results best R and mae
+                 # 'DRGC2_discharge_outlet_28559.ts',  # this is 1st Paul repeat results best NSE and rmse
+                 # 'DRGC2_discharge_outlet_paul_repeat_22yr.ts',  # this is 1st Paul repeat running 22yr data using 28560 results
+                 # 'DRGC2_53877_discharge_outlet.ts', #this is 2nd Paul repeat results lowest bias
+                 # 'DRGC2_17284_discharge_outlet.ts', #this is 2nd Paul repeat results lowest rmse (best parameter sets)
+                 # 'DRGC2_17282_discharge_outlet.ts', #this is 2nd Paul repeat results highest R
                  # 'DRGC2_discharge_outlet_31567.ts',
-                 # 'DRGC2_discharge_outlet_chpc_para.ts' # this is useing the parameter from 62824 to rerun 22yr sac model
+                 # 'DRGC2_discharge_outlet_chpc_para.ts', # this is useing the parameter from 62824 to rerun 22yr sac model
                  ]
 
+# User check information !!!!
 obs_file = 'DRGC2H_F.QME'
 watershed_area = 1818920000  # m^2  1818.92 km^2
 start_time = '1989-10-01' #'2005-10-01'
-end_time = '2010-6-30' #'2006-9-30'
+end_time = '2010-06-30' #'2006-9-30'
 
 DF_list = []
 plt.ioff()
@@ -36,6 +43,7 @@ for sim_file in sim_file_list:
 
     # get data frame
     DF = get_sim_obs_dataframe(sim_file, obs_file,
+                               sim_skip=136,
                                start_time=start_time, end_time=end_time,
                                save_folder=results_dir)
     DF_list.append(DF)
