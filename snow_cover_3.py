@@ -19,6 +19,7 @@ import shutil
 
 import pandas as pd
 import gdalnumeric
+from snow_cover_utility import array_to_raster
 
 
 # default user settings apply to all steps ####################################################
@@ -157,7 +158,7 @@ if os.path.isdir(modis_proj_folder):
                 modis_proj_array = gdalnumeric.LoadFile(modis_proj_path)
                 cloud_cover_pixel = (modis_proj_array[0] == 250).sum()
                 if cloud_cover_pixel > 0:
-                    from snow_cover_utility import create_bar_plot, array_to_raster
+
                     for i in range(10):
                         cmd_interp_bin = 'gdal_fillnodata.py -md 2 {} {}'.format(modis_bin_path, modis_bin_path)
 
