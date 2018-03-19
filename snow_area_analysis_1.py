@@ -17,7 +17,6 @@ step:
 import gzip
 import os
 
-import numpy as np
 import pandas as pd
 
 from snow_cover_utility import get_sim_dataframe

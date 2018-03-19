@@ -117,7 +117,7 @@ for swe_proj_folder in swe_proj_folders:
 # step2: use pixel count to calculate stats ##############################################################
 print 'step2: calculate stats'
 
-result_list =[['model', 'modis_ave', 'swe_ave', 'mae', 'nse', 'r2', 'correct']]
+result_list = [['model', 'modis_ave', 'swe_ave', 'mae', 'nse', 'r2', 'correct']]
 invalid_index_list = []
 for model in ['snow17', 'ueb']:
     pixel_count_path = os.path.join(stats_folder, 'pixel_count_{}.csv'.format(model))
@@ -125,7 +125,7 @@ for model in ['snow17', 'ueb']:
     if os.path.isfile(pixel_count_path):
         # calculate percent snow
         pixel_count = pd.DataFrame.from_csv(pixel_count_path, header=0)
-        pixel_count = pixel_count[(pixel_count.weight >= 0)]
+        pixel_count = pixel_count[(pixel_count.weight > 0)]
 
         # if start_time and end_time:
         #     pixel_count = pixel_count[(pixel_count.index <= end_time) & (pixel_count.index >= start_time)]
