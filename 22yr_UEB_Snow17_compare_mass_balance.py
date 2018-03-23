@@ -3,6 +3,7 @@ This is using the RDHM time series to analyze the mass balance of snow model (sn
 
 requirements:
 - put utility py file
+- the output should be from the old code that has m/dt or m units.
 
 step:
 - check ueb mass balance: snow/ sac/ snow+sac
