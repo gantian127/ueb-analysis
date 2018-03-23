@@ -184,7 +184,7 @@ def get_sac_ts_dataframe(ts_file_list, start_time='', end_time='', sim_skip=91,
             sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
             sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
             sim_data.drop([0, 1, 2], axis=1, inplace=True)
-            sim_data.ix[sim_data[column_name] < 0, column_name] = np.nan
+            # sim_data.ix[sim_data[column_name] < 0, column_name] = np.nan
             sim_data = sim_data.set_index('time')
             df_list.append(sim_data)
 
@@ -290,6 +290,7 @@ def plot_obs_vs_sim(
                     xlim=None,
                     ylim=None,
                     text_position=[0.1, 0.80],
+                    daily_bias_title='Daily mean bias',
                     month_interval=1,
                     format='%Y',
                     reverse=False,
@@ -359,12 +360,11 @@ def plot_obs_vs_sim(
                                 figsize=figsize[1],
                                 label_list=['sim-obs (mean={}'.format(DF['bias'].mean())])
     refine_plot(ax, xlabel='time', ylabel='discharge(cms)',
-                title='Daily mean bias',
+                title=daily_bias_title,
                 time_axis=True,
                 interval=month_interval,
                 format=format,
                 legend=True,
-
                 )
     if save_folder or save_name:
         save_fig(fig, save_as=os.path.join(save_folder if save_folder else os.getcwd(),
@@ -766,7 +766,7 @@ def get_monthly_mean_stat(DF, watershed_area):
     return monthly_mean_multiyear, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth
 
 
-def get_sim_dataframe(sim_file, start_time='', end_time='', sim_skip=91, time_change_ori=('24', '25'), time_change_new=('23', '1')):
+def get_sim_dataframe(sim_file, group=True, allow_negative=False, start_time='', end_time='', sim_skip=91, time_change_ori=('24', '25'), time_change_new=('23', '1')):
     # get sim daily data
     raw_sim = pd.read_csv(sim_file, skiprows=sim_skip, header=None, names=['raw'])
     sim_data = raw_sim['raw'].str.split('\s+', expand=True)
@@ -777,8 +777,12 @@ def get_sim_dataframe(sim_file, start_time='', end_time='', sim_skip=91, time_ch
     sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
     sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
     sim_data.drop([0, 1, 2], axis=1, inplace=True)
-    sim_data.ix[sim_data.sim < 0, 'sim'] = np.nan
-    sim = sim_data.set_index('time').groupby(pd.TimeGrouper(freq='D'))['sim'].mean()
+    if not allow_negative:
+        sim_data.ix[sim_data.sim < 0, 'sim'] = np.nan
+    if group:
+        sim = sim_data.set_index('time').groupby(pd.TimeGrouper(freq='D'))['sim'].mean()
+    else:
+        sim = sim_data.set_index('time')
 
     if start_time and end_time:
         sim = sim[(sim.index >= start_time) & (sim.index <= end_time)]
