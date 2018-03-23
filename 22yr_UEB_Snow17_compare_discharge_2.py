@@ -20,19 +20,19 @@ from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_v
 
 
 # user settings
-ueb_file = 'DRGC2_discharge_outlet_22yr.ts'
-snow17_file = 'DRGC2_discharge_outlet_RTI_snow17.ts'
-obs_file = 'DRGC2H_F.QME'
+ueb_file = 'ueb.ts'
+snow17_file = 'snow17.ts'
+obs_file = 'DOLC2L_F.QME'
 start_time = '1989-10-01'
 end_time = '2010-06-30'
-watershed_area = 1818920000  # m^2  1818.92 km^2
-watershed_name = 'Animas'
+watershed_area = 1503860000  # m^2  1503.86 km^2
+watershed_name = 'DOLC2'
 
 
 # get the discharge from file
 sim_dict = {
-    'ueb': get_sim_dataframe(ueb_file, start_time, end_time, sim_skip=91),
-    'snow17': get_sim_dataframe(snow17_file, start_time, end_time, sim_skip=136)
+    'ueb': get_sim_dataframe(ueb_file, start_time=start_time, end_time=end_time, sim_skip=121),
+    'snow17': get_sim_dataframe(snow17_file, start_time=start_time, end_time=end_time, sim_skip=136)
 }
 obs_df = get_obs_dataframe(obs_file,start_time, end_time)
 
@@ -59,16 +59,18 @@ for key, sim_df in sim_dict.items():
                     ts_xlim=[datetime(DF.time[0].year, 1, 1),
                              datetime(DF.time[len(DF) - 1].year, 12, 31)],
                     format='%Y',
-                    ts_title='Time series of observation vs. simulation discharge',
+                    ts_title='Time series of observation vs. simulation discharge for ({}+sac)'.format(key),
+                    daily_bias_title='Daily mean bias for ({}+sac)'.format(key),
                     save_folder=results_dir,
                     save_name='time_series_{}.png'.format(key),
                     )
 
 # time series plot
-plot_df = pd.concat([ sim_dict['snow17'], obs_df, sim_dict['ueb']], axis=1)
+plot_df = pd.concat([sim_dict['snow17'], obs_df, sim_dict['ueb']], axis=1)
 plot_df.columns = ['snow17', 'obs', 'ueb']
 fig, ax = plt.subplots(figsize=(13, 6))
-plot_df.plot(ax=ax,x_compat=True)
+plot_df.plot.area(y='obs',ax=ax, style=['silver'],x_compat=True)
+plot_df.plot(y=['snow17', 'ueb'], ax=ax, style=['-',':'])
 ax.xaxis.set_major_locator(mdates.YearLocator(1, month=1, day=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 ax.set_title('time series of discharge')
@@ -81,9 +83,7 @@ for key, value in basic_stat_dict.items():
             'r={}\n' \
             'bias={} cms\n\n'.format(key, value[0], value[1], value[3], round(value[4], 3))
 ax.text(0.02, 0.6, text, transform=ax.transAxes, size=8)
-fig.savefig(os.path.join(results_dir, 'time_series.png'), dpi=1200)
-
-
+fig.savefig(os.path.join(results_dir, 'time_series.png'), )
 
 
 # monthly plot (cms)
@@ -104,7 +104,7 @@ text = 'snow17_bias = {}\n' \
                                         round(monthly_mean_dict['ueb'][1], 3),
                                         round(monthly_mean_dict['ueb'][2], 3))
 ax1.text(0.02, 0.75, text, transform=ax1.transAxes)
-fig1.savefig(os.path.join(results_dir,'monthly_mean.png'), dpi=1200)
+fig1.savefig(os.path.join(results_dir,'monthly_mean.png'), )
 
 # monthly plot (depth)
 fig2, ax2 = plt.subplots(figsize=(10, 5))
@@ -124,7 +124,7 @@ text = 'snow17_bias = {}\n' \
                                         round(monthly_mean_dict['ueb'][3], 3),
                                         round(monthly_mean_dict['ueb'][4], 3))
 ax2.text(0.02, 0.75, text, transform=ax2.transAxes)
-fig2.savefig(os.path.join(results_dir,'monthly_mean_depth.png'), dpi=1200)
+fig2.savefig(os.path.join(results_dir,'monthly_mean_depth.png'), )
 
 
 # annual plot (cms)
@@ -145,7 +145,7 @@ text = 'snow17_bias = {}\n' \
                                         round(annual_mean_dict['ueb'][1], 3),
                                         round(annual_mean_dict['ueb'][2], 3))
 ax3.text(0.02, 0.8, text, transform=ax3.transAxes)
-fig3.savefig(os.path.join(results_dir, 'annual_mean.png'), dpi=1200)
+fig3.savefig(os.path.join(results_dir, 'annual_mean.png'), )
 
 # annual plot (depth)
 fig4, ax4 = plt.subplots(figsize=(13, 6))
@@ -165,7 +165,7 @@ text = 'snow17_bias = {}\n' \
                                         round(annual_mean_dict['ueb'][3], 3),
                                         round(annual_mean_dict['ueb'][4], 3))
 ax4.text(0.02, 0.8, text, transform=ax4.transAxes)
-fig4.savefig(os.path.join(results_dir, 'annual_mean_depth.png'), dpi=1200)
+fig4.savefig(os.path.join(results_dir, 'annual_mean_depth.png'), )
 
 
 # annual plot (cms)
@@ -186,7 +186,7 @@ text = 'snow17_bias = {}\n' \
                                         round(volume_err_dict['ueb'][1], 3),
                                         round(volume_err_dict['ueb'][2], 3))
 ax5.text(0.02, 0.8, text, transform=ax5.transAxes)
-fig5.savefig(os.path.join(results_dir, 'volume_err.png'), dpi=1200)
+fig5.savefig(os.path.join(results_dir, 'volume_err.png'), )
 
 # annual plot (depth)
 fig6, ax6 = plt.subplots(figsize=(13, 6))
@@ -206,6 +206,6 @@ text = 'snow17_bias = {}\n' \
                                         round(volume_err_dict['ueb'][3], 3),
                                         round(volume_err_dict['ueb'][4], 3))
 ax6.text(0.02, 0.8, text, transform=ax6.transAxes)
-fig6.savefig(os.path.join(results_dir, 'volume_err_depth.png'), dpi=1200)
+fig6.savefig(os.path.join(results_dir, 'volume_err_depth.png'), )
 
 print 'analysis is finished'
