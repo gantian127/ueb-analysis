@@ -17,24 +17,26 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from plot_SAC_utility import get_sac_ts_dataframe
+from plot_SAC_utility import get_sac_ts_dataframe, get_snotel_swe_df, get_obs_dataframe
 
 # Default settings ########################################################
 plt.ioff()
 watershed = 'DOLC2'
 watershed_area = 0
 
-snow17_dir = r'C:\Users\jamy\Desktop\snow17'
-ueb_dir = r'C:\Users\jamy\Desktop\SAC_out'
+snow17_dir = r'D:\Research_Data\Mcphee_DOLC2\snow17_best_time_series'
+ueb_dir = r'D:\Research_Data\Mcphee_DOLC2\UEB_best_time_series'
+snotel_folder_path = r'D:\Research_Data\Mcphee_DOLC2\snotel_swe'
+obs_discharge_path = r'D:\Research_Data\Mcphee_DOLC2\DOLC2L_F.QME'
 
 snow17_skip = 136
 ueb_skip = 121
 
-start_time = '1988-10-1'
-end_time = '2010-6-30'
+start_time = '1989-10-1'
+end_time = '2010-9-30'
 dt = 6
 
-result_dir = os.path.join(os.getcwd(), 'model_mass_balance_{}_{}'.format(watershed, 'all' if end_time == '' else end_time[:4]))
+result_dir = os.path.join(os.getcwd(), 'model_mass_balance_{}_{}'.format(watershed, 'all' if end_time == '' else start_time[:4] + end_time[:4]))
 if not os.path.isdir(result_dir):
     os.makedirs(result_dir)
 
@@ -48,7 +50,7 @@ if os.path.isdir(ueb_dir):
     # snow model mass balance ###########################################################
     # error = cump - swe - Wc - cumrmlt - cumEc - cumEs
     ueb_df['ueb_prcp'] = 1000 * ueb_df['ueb_P']*dt  #TODO: may need to delete 1000 after the model code update
-    ueb_df['ueb_prcp_cum'] = ueb_df['ueb_cump'] # 1000*dt*ueb_df['ueb_P'].cumsum()  different from cump and smaller than cump
+    ueb_df['ueb_prcp_cum'] = ueb_df['ueb_cump'] # TODO use this dt*ueb_df['ueb_P'].cumsum()
     ueb_df['ueb_swit_cum'] = dt*ueb_df['ueb_SWIT'].cumsum()  # different from ueb_cumMr
     ueb_df['ueb_es_cum'] = dt*ueb_df['ueb_Es'].cumsum()
     ueb_df['ueb_ec_cum'] = dt*ueb_df['ueb_Ec'].cumsum()
@@ -60,12 +62,19 @@ if os.path.isdir(ueb_dir):
     # stat: total sublimation stats
     percent_as_sublimation = 100 * ueb_df['ueb_sublimation_cum'][-1]/ueb_df['ueb_prcp_cum'][-1]
     annual_sublimation = ueb_df['ueb_sublimation_cum'][-1]/(ueb_df.index[-1].year - ueb_df.index[0].year)  # in meter
-    annual_sublimation_percent = percent_as_sublimation/(ueb_df.index[-1].year - ueb_df.index[0].year)
+    annual_canopy_sublimation = ueb_df['ueb_ec_cum'][-1]/(ueb_df.index[-1].year - ueb_df.index[0].year)
+    annual_ground_sublimation = ueb_df['ueb_es_cum'][-1]/(ueb_df.index[-1].year - ueb_df.index[0].year)
+    percent_canopy_sublimation = 100 * ueb_df['ueb_ec_cum'][-1]/ueb_df['ueb_sublimation_cum'][-1]
+    percent_ground_sublimation = 100 * ueb_df['ueb_es_cum'][-1]/ueb_df['ueb_sublimation_cum'][-1]
+
     with open(os.path.join(result_dir, 'sublimation_stat.txt'),'w') as f:
         f.write("\n".join([
             'percent sublimation:{} %'.format(round(percent_as_sublimation, 2)),
-            'annual sublimation:{} mm'.format(round(annual_sublimation,3)),
-            'annual sublimation:{} %'.format(round(annual_sublimation_percent, 2)),
+            'annual sublimation:{} mm'.format(round(annual_sublimation, 3)),
+            'annual canopy sublimation:{} mm'.format(round(annual_canopy_sublimation, 3)),
+            'annual canopy sublimation:{} %'.format(round(percent_canopy_sublimation, 2)),
+            'annual ground sublimation:{} mm'.format(round(annual_ground_sublimation, 3)),
+            'annual ground sublimation:{} %'.format(round(percent_ground_sublimation, 2)),
         ]))
 
     # plot: mass balance and error
@@ -99,23 +108,17 @@ if os.path.isdir(ueb_dir):
 
     # plot: SWE
     fig, ax = plt.subplots(figsize=(10,5))
-    ueb_df.plot.area(y=['ueb_Wc','ueb_SWE'],
+    ueb_df.plot(y=['ueb_Wc', 'ueb_SWE', 'ueb_we_total'],
                      ax=ax,
                      title='UEB ground and canopy swe for {}'.format(watershed),
-                     style=['whitesmoke','silver'],
                      legend=False)
-    ueb_df.plot(y=['ueb_we_total'],
-                   ax=ax,
-                   legend=False,
-                   )
-
-    ax.legend(['ground SWE',
-               'surface SWE',
-               'total SWE',
+    ax.legend(['canopy swe',
+               'ground swe',
+               'total swe',
               ])
     ax.set_ylabel('SWE(mm)')
 
-    fig.savefig(os.path.join(result_dir,'ueb_swe.png'))
+    fig.savefig(os.path.join(result_dir, 'ueb_swe.png'))
 
     # plot: sublimation
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -123,13 +126,15 @@ if os.path.isdir(ueb_dir):
                      ax=ax[0],
                      title='UEB cumulative ground and canopy sublimation for {}'.format(watershed),
                 )
-    ax[0].set_ylabel('SWE(mm)')
+    ax[0].set_ylabel('cumulative sublimation(mm)')
+    ax[0].legend(['ground', 'canopy', 'total'])
 
     ueb_df.plot(y=['ueb_Ec', 'ueb_Es'],
                      ax=ax[1],
                      title='UEB ground and canopy sublimation for {}'.format(watershed),
                 )
-    ax[1].set_ylabel('SWE(mm)')
+    ax[1].set_ylabel('sublimation(mm/{}hr)'.format(dt))
+    ax[1].legend(['canopy', 'ground', ])
     plt.tight_layout()
 
     fig.savefig(os.path.join(result_dir,'ueb_sublimation.png'))
@@ -160,6 +165,7 @@ if os.path.isdir(ueb_dir):
                               - ueb_df['ueb_surfaceFlow_cum'] - ueb_df['ueb_subsurfaceFlow_cum']
     ueb_df['ueb_total_et_cum'] = ueb_df['ueb_sublimation_cum'] + ueb_df['ueb_tet_cum']
     ueb_df['ueb_total_et'] = ueb_df['ueb_Es']*dt + ueb_df['ueb_Ec']*dt + ueb_df['ueb_tet']
+    ueb_df['ueb_total_runoff'] = ueb_df['ueb_surfaceFlow'] = ueb_df['ueb_subsurfaceFlow']
 
     # plot: mass balance and error
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -204,7 +210,7 @@ if os.path.isdir(snow17_dir):
 
     # snow model mass balance #################################################
     # error = cump - cumrmlt - swe
-    snow17_df['snow17_prcp_cum'] = snow17_df['snow17_xmrg'].cumsum() # TODO: mass balance error check how to calculate cum prcp
+    snow17_df['snow17_prcp_cum'] = snow17_df['snow17_xmrg'].cumsum()
     snow17_df['snow17_rmlt_cum'] = snow17_df['snow17_rmlt'].cumsum()
     snow17_df['snow17_we_total'] = snow17_df['snow17_liqw'] + snow17_df['snow17_we']
     snow17_df['snow17_snow_error'] = snow17_df['snow17_prcp_cum'] - snow17_df['snow17_rmlt_cum'] - snow17_df['snow17_we_total']
@@ -213,7 +219,7 @@ if os.path.isdir(snow17_dir):
     fig, ax = plt.subplots(figsize=(10, 5))
     snow17_df.plot(y=['snow17_prcp_cum',
                       'snow17_rmlt_cum',
-                      'snow17_we',
+                      'snow17_we_total',
                       ],
                    ax=ax,
                    title='SNOW17 model mass balance for {}'.format(watershed),
@@ -222,7 +228,7 @@ if os.path.isdir(snow17_dir):
 
     ax.legend(['cum prcpitation',
                'cum rain plus melt',
-               'swe',
+               'total swe',
                ]
               )
     ax.set_ylabel('water input/output (mm)')
@@ -240,11 +246,12 @@ if os.path.isdir(snow17_dir):
 
     # plot: SWE
     fig, ax = plt.subplots(figsize=(10, 5))
-    snow17_df.plot(y=['snow17_we', 'snow17_liqw'],
+    snow17_df.plot(y=['snow17_we', 'snow17_liqw','snow17_we_total'],
                      ax=ax,
                      title='Snow17 swe and liquid water for {}'.format(watershed),
                    )
     ax.set_ylabel('SWE(mm)')
+    ax.legend(['we', 'liqw', 'total swe'])
     fig.savefig(os.path.join(result_dir, 'snow17_we.png'))
 
     # sac mass balance ################################################################
@@ -257,6 +264,7 @@ if os.path.isdir(snow17_dir):
     snow17_df['snow17_surfaceFlow_cum'] = snow17_df['snow17_surfaceFlow'].cumsum()
     snow17_df['snow17_sac_error'] = snow17_df['snow17_rmlt_cum'] - snow17_df['snow17_storage_change'] - snow17_df['snow17_tet_cum'] \
                                     - snow17_df['snow17_surfaceFlow_cum'] - snow17_df['snow17_subsurfaceFlow_cum']
+    snow17_df['snow17_total_runoff'] = snow17_df['snow17_surfaceFlow'] = snow17_df['snow17_subsurfaceFlow']
 
     # plot: mass balance and error
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -347,6 +355,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     fig.savefig(os.path.join(result_dir, 'compare_cum_prcp.png'))
 
     # compare SWE  #####################################################
+    # compare model swe
     concat_df['swe_diff'] = concat_df['ueb_we_total'] - concat_df['snow17_we_total']
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     concat_df.plot(y=['ueb_we_total',
@@ -355,8 +364,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
                    title='Compare SWE between UEB and Snow17',
                    legend=False,
                    )
-    ax[0].legend(['ueb SWE',
-               'snow17 SWE'])
+    ax[0].legend(['ueb SWE', 'snow17 SWE'])
     ax[0].set_ylabel('SWE(mm)')
 
     concat_df.plot(y=['swe_diff'],
@@ -367,10 +375,31 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     ax[1].legend(['ueb - snow17'])
     ax[1].set_ylabel('SWE(mm)'.format(dt))
     plt.tight_layout()
-    fig.savefig(os.path.join(result_dir, 'compare_swe.png'))
+    fig.savefig(os.path.join(result_dir, 'compare_swe_model.png'))
+
+    # compare model vs snotel obs swe
+    if snotel_folder_path:
+        swe_file_list = [os.path.join(snotel_folder_path, file_name) for file_name in os.listdir(snotel_folder_path)]
+        snotel_df = get_snotel_swe_df(swe_file_list, start_time=start_time, end_time=end_time)
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        concat_df.plot(y=['ueb_we_total',
+                          'snow17_we_total'],
+                       ax=ax,
+                       title='Compare model SWE with SNOTEL SWE',
+                       legend=True,
+                       )
+        snotel_df.plot(ax=ax,
+                       legend=True,
+                       style=[':']*len(snotel_df.columns),
+                       )
+        ax.set_ylabel('SWE(mm)')
+        fig.savefig(os.path.join(result_dir, 'compare_swe_snotel.png'))
+
 
     # compare ET  #####################################################
     concat_df['tet_diff'] = concat_df['ueb_tet'] - concat_df['snow17_tet']
+    concat_df['tet_cum_diff'] = concat_df['ueb_tet_cum'] - concat_df['snow17_tet_cum']
     concat_df['total_et_cum_diff'] = concat_df['ueb_total_et_cum'] - concat_df['snow17_tet_cum']
     concat_df['total_et_diff'] = concat_df['ueb_total_et'] - concat_df['snow17_tet']
 
@@ -384,7 +413,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
                    legend=False,
                    )
     ax[0].legend(['ueb', 'snow17'])
-    ax[0].set_ylabel('ET (mm/{})'.format(dt))
+    ax[0].set_ylabel('ET (mm/{}hr)'.format(dt))
 
     concat_df.plot(y=['tet_diff'],
                    ax=ax[1],
@@ -392,9 +421,31 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
                    legend=False,
                    )
     ax[1].legend(['ueb - snow17'])
-    ax[1].set_ylabel('ET (mm/{})'.format(dt))
+    ax[1].set_ylabel('ET (mm/{}hr)'.format(dt))
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_tet.png'))
+
+    # compare cum tet
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    concat_df.plot(y=['ueb_tet_cum',
+                      'snow17_tet_cum'
+                      ],
+                   ax=ax[0],
+                   title='Compare cumulative tet between UEB and Snow17',
+                   legend=False,
+                   )
+    ax[0].legend(['ueb', 'snow17'])
+    ax[0].set_ylabel('cumulative ET (mm)')
+
+    concat_df.plot(y=['tet_cum_diff'],
+                   ax=ax[1],
+                   title='Difference of cumulative tet between UEB and Snow17',
+                   legend=False,
+                   )
+    ax[1].legend(['ueb - snow17'])
+    ax[1].set_ylabel('cumulative ET (mm)')
+    plt.tight_layout()
+    fig.savefig(os.path.join(result_dir, 'compare_cum_tet.png'))
 
     # compare cum total ET
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -440,20 +491,47 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_total_et.png'))
 
+    # combine cumulative snow17 tet, ueb tet and total ET
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    concat_df.plot(y=['ueb_total_et_cum',
+                      'ueb_tet_cum',
+                      'snow17_tet_cum',
+                      ],
+                   ax=ax[0],
+                   title='Compare cumulative total ET between UEB and Snow17',
+                   legend=False,
+                   )
+    ax[0].legend(['ueb cumulative total ET', 'ueb cumulative ET', 'snow17 cumulative total ET'])
+    ax[0].set_ylabel('Cumulative ET (mm)')
+
+    concat_df.plot(y=['total_et_cum_diff',
+                      'tet_cum_diff'],
+                   ax=ax[1],
+                   title='Difference of total ET between UEB and Snow17 (UEB - Snow17)',
+                   legend=False,
+                   )
+    ax[1].legend(['cumulative total ET', 'cumulative ET'])
+    ax[1].set_ylabel('Cumulative ET (mm)')
+    plt.tight_layout()
+    fig.savefig(os.path.join(result_dir, 'compare_combine_ET.png'))
+
     # compare discharge  #####################################################
+
+    # compare discharge with obs.
     concat_df['discharge_diff'] = concat_df['ueb_discharge'] - concat_df['snow17_discharge']
 
-    # compare tet
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     concat_df.plot(y=['ueb_discharge',
                       'snow17_discharge'
                       ],
                    ax=ax[0],
                    title='Compare discharge between UEB and Snow17',
-                   legend=False,
                    )
-    ax[0].legend(['ueb', 'snow17'])
     ax[0].set_ylabel('discharge(cms)')
+
+    if obs_discharge_path:
+        obs_discharge = get_obs_dataframe(obs_discharge_path, start_time=start_time, end_time=end_time)
+        obs_discharge.plot(ax=ax[0], style=[':'])
 
     concat_df.plot(y=['discharge_diff'],
                    ax=ax[1],
@@ -464,6 +542,32 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     ax[1].set_ylabel('discharge(cms)')
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_discharge.png'))
+
+    # combine swe with discharge
+    fig, ax = plt.subplots(figsize=(12,6))
+    ax1 = ax.twinx()
+    ax1.margins(0)
+    concat_df.plot.area(y=['ueb_we_total',
+                          'snow17_we_total'],
+                   ax=ax,
+                   title='Compare SWE and discharge between UEB and Snow17',
+                   legend=False,
+                   style=['black','silver'],
+                   stacked=False,
+                   )
+    ax.legend(['ueb_swe','snow17_swe'], loc='upper left')
+    ax.set_ylabel('SWE(mm)')
+
+    concat_df.plot(y=['ueb_discharge','snow17_discharge'],
+                   ax=ax1,
+                   )
+    # ax1.legend(['ueb_discharge', 'snow17_discharge'], loc='upper right')
+    ax1.set_ylabel('discharge(cms)')
+
+    if obs_discharge_path:
+        obs_discharge.plot(ax=ax1, style='g:')
+
+    fig.savefig(os.path.join(result_dir,'compare_combine_swe_discharge.png'))
 
     concat_df.to_csv(os.path.join(result_dir, 'concat_df.csv'))
 
