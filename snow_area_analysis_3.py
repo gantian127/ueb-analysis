@@ -19,7 +19,7 @@ import numpy as np
 
 # default user settings apply to all steps ####################################################
 # folders/files created by step 2 script
-watershed = 'animas'
+watershed = 'DOLC2'
 folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 model_snow_date_path = os.path.join(result_folder, 'model_snow_date.csv')
@@ -30,8 +30,8 @@ swe_proj_folders = [os.path.join(result_folder, name) for name in ['snow17_proj_
 swe_threshold = 1  # mm
 
 # time for analysis:
-start_time = '2006/11/01'
-end_time = '2007/10/01'
+start_time = '2000/10/01'
+end_time = '2010/09/30'
 
 # new csv file path
 stats_folder = os.path.join(result_folder, 'stats_folder')

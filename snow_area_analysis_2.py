@@ -24,7 +24,7 @@ import gdal
 
 
 # default user settings apply to all steps ####################################################
-watershed = 'animas'
+watershed = 'DOLC2'
 folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 
@@ -50,6 +50,7 @@ snow_date = pd.DataFrame.from_csv(model_snow_date_path, header=0)
 for swe_xmrg_folder in swe_snowdate_folders:
 
     if os.path.isdir(swe_xmrg_folder):
+        fail_swe_xmrg = []
         # create projection folder and dataframe column
         xmrg_col_name = os.path.basename(swe_xmrg_folder)
         proj_col_name = os.path.basename(swe_xmrg_folder).replace('snowdate', 'proj')
@@ -77,11 +78,15 @@ for swe_xmrg_folder in swe_snowdate_folders:
                     except Exception as e:
                         print 'failed to reproject model swe!'
                         print swe_xmrg_path
+                        print os.path.isfile(swe_xmrg_path)
+                        fail_swe_xmrg.append(swe_xmrg_path)
                         continue
                 else:
                     snow_date[proj_col_name].ix[time] = swe_proj_path
 
         snow_date.to_csv(model_snow_date_path)
+        with open(os.path.join(result_folder, 'fail_{}.txt'.format(proj_col_name)), 'w') as f:
+            f.write('\n'.join(fail_swe_xmrg))
     else:
         print 'no folder {}'.format(swe_xmrg_folder)
 
@@ -120,7 +125,7 @@ except Exception as e:
 tif_col_name = os.path.basename(modis_snowdate_folder)
 proj_col_name = tif_col_name.replace('snowdate','proj')
 snow_date[proj_col_name] = 'invalid'
-
+fail_modis_proj = []
 for time in snow_date.index:
     modis_tif_path = snow_date[tif_col_name].ix[time]
     if os.path.isfile(modis_tif_path):
@@ -128,7 +133,7 @@ for time in snow_date.index:
         modis_clip_name = os.path.basename(modis_proj_path).replace('_proj.tif', '_clip.tif')
         modis_clip_path = os.path.join(modis_proj_folder, modis_clip_name)
 
-        # TODO: may need to combine as one
+        # reproject and clip as two step: because if with 1 step, the x and y resolution will not be the same as the swe xmrg resolution.
         if not os.path.isfile(modis_proj_path):
             cmd_reproj = 'gdalwarp -overwrite -t_srs "{}" -tr 463 463 {} {}'.format(proj4_string, modis_tif_path, modis_proj_path)
         else:
@@ -142,10 +147,16 @@ for time in snow_date.index:
                         subprocess.call(shlex.split(command))
                 snow_date[proj_col_name].ix[time] = modis_clip_path
             except Exception as e:
+                print 'failed to reproject modis swe!'
+                print modis_tif_path
+                print os.path.isfile(modis_tif_path)
+                fail_modis_proj.append(modis_tif_path)
                 continue
         else:
             snow_date[proj_col_name].ix[time] = modis_clip_path
 
 snow_date.to_csv(model_snow_date_path)
+with open(os.path.join(result_folder, 'fail_{}.txt'.format(proj_col_name)), 'w') as f:
+    f.write('\n'.join(fail_modis_proj))
 
 print 'snow_area_analysis_2: swe, modis reprojection, clip, resample is done'
