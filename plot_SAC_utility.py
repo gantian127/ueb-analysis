@@ -200,6 +200,28 @@ def get_sac_ts_dataframe(ts_file_list, start_time='', end_time='', sim_skip=91,
     return DF
 
 
+# Functions used for mass balance check of swe
+def get_snotel_swe_df(swe_file_list, start_time='', end_time='', swe_name='Snow Water Equivalent (mm)', ext='.csv'):
+    snotel_df_list = []
+    snotel_col_names = []
+    for swe_file_path in swe_file_list:
+        df = pd.read_csv(swe_file_path)
+        df.index = pd.to_datetime(df['Date'], format='%Y-%m-%d')
+        if start_time and end_time:
+            swe_df = df[swe_name][(df.index >= start_time) & (df.index <= end_time)]
+        else:
+            swe_df = df[swe_name]
+
+        if len(swe_df) != 0:
+            snotel_df_list.append(swe_df)
+            snotel_col_names.append(os.path.basename(swe_file_path).replace(ext, ''))
+
+    snotel_df = pd.concat(snotel_df_list, axis=1)
+    snotel_df.columns = snotel_col_names
+
+    return snotel_df
+
+
 # Functions used for 22yr model comparision and data analysis
 def get_sim_obs_dataframe(sim_file, obs_file=None, start_time='', end_time='', sim_skip=91, obs_skip=3, obs_unit=0.0283168,
                           time_change_ori=('24', '25'), time_change_new=('23', '1'), save_folder=None):
