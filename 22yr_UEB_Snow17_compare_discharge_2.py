@@ -20,14 +20,15 @@ from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_v
 
 
 # user settings
-ueb_file = 'ueb.ts'
+ueb_file = 'DOLC2_discharge_outlet_7578.ts'
 snow17_file = 'snow17.ts'
 obs_file = 'DOLC2L_F.QME'
 start_time = '1989-10-01'
-end_time = '2010-06-30'
+end_time = '2010-09-30'
 watershed_area = 1503860000  # m^2  1503.86 km^2
 watershed_name = 'DOLC2'
 
+plt.ioff()
 
 # get the discharge from file
 sim_dict = {
@@ -69,7 +70,7 @@ for key, sim_df in sim_dict.items():
 plot_df = pd.concat([sim_dict['snow17'], obs_df, sim_dict['ueb']], axis=1)
 plot_df.columns = ['snow17', 'obs', 'ueb']
 fig, ax = plt.subplots(figsize=(13, 6))
-plot_df.plot.area(y='obs',ax=ax, style=['silver'],x_compat=True)
+plot_df.plot.area(y='obs', ax=ax, style=['silver'],x_compat=True)
 plot_df.plot(y=['snow17', 'ueb'], ax=ax, style=['-',':'])
 ax.xaxis.set_major_locator(mdates.YearLocator(1, month=1, day=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
