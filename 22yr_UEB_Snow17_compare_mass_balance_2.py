@@ -396,7 +396,6 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
         ax.set_ylabel('SWE(mm)')
         fig.savefig(os.path.join(result_dir, 'compare_swe_snotel.png'))
 
-
     # compare ET  #####################################################
     concat_df['tet_diff'] = concat_df['ueb_tet'] - concat_df['snow17_tet']
     concat_df['tet_cum_diff'] = concat_df['ueb_tet_cum'] - concat_df['snow17_tet_cum']
@@ -447,7 +446,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_cum_tet.png'))
 
-    # compare cum total ET
+    # compare cum total ET: all years
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     concat_df.plot(y=['ueb_total_et_cum',
                       'snow17_tet_cum'
@@ -468,6 +467,30 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     ax[1].set_ylabel('Cumulative ET (mm)')
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_cum_total_et.png'))
+
+    # compare cum total ET: each years
+    subset = concat_df[(concat_df.index.month == 9) & (concat_df.index.day == 30) &
+                                    (concat_df.index.hour == 23)][['ueb_total_et_cum', 'snow17_tet_cum']]
+    annual_total_et_cum = subset.diff()
+    annual_total_et_cum.ix[0] = subset.ix[0]
+    annual_total_et_cum['percent_difference'] = 100*(annual_total_et_cum.snow17_tet_cum - annual_total_et_cum.ueb_total_et_cum)/annual_total_et_cum.snow17_tet_cum
+    fix, ax = plt.subplots(2,1)
+    annual_total_et_cum.plot.box(y=['ueb_total_et_cum',
+                                    'snow17_tet_cum' ],
+                                 ax=ax[0],
+                                 title='Annual cumulative total ET from UEB and Snow17',
+                                 legend=False,
+                                 )
+    ax[0].set_ylabel('Cumulative ET (mm)')
+    ax[0].set_xticklabels(['ueb','snow17'])
+
+    annual_total_et_cum.plot.box(y=['percent_difference'],
+                                 ax=ax[1],
+                                 legend=False,
+                                 )
+    ax[1].set_ylabel('cumulative ET difference (%)')
+    ax[1].set_xticklabels(['percent difference (snow17-ueb)/snow17'])
+    fig.savefig(os.path.join(result_dir, 'compare_cum_total_et_box.png'))
 
     # compare total ET
     fig, ax = plt.subplots(2,1, figsize=(10, 8))
@@ -555,7 +578,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
                    style=['black','silver'],
                    stacked=False,
                    )
-    ax.legend(['ueb_swe','snow17_swe'], loc='upper left')
+    ax.legend(['ueb_swe', 'snow17_swe'], loc='upper left')
     ax.set_ylabel('SWE(mm)')
 
     concat_df.plot(y=['ueb_discharge','snow17_discharge'],
