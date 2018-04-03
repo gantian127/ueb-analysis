@@ -701,9 +701,10 @@ def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=
 
 
 ## functions used for the auto-calibration analysis for all the populations
-def get_basic_stats(stat_df):
+def get_basic_stats(input_df, obs='obs', sim='sim'):
+    stat_df = input_df[[obs, sim]].copy()
     # rmse: sqrt(mean(sum((Qs-Qo)**2)))
-    stat_df['valDiff'] = stat_df['obs'] - stat_df['sim']
+    stat_df['valDiff'] = stat_df[obs] - stat_df[sim]
     valDiff_mean = stat_df['valDiff'].mean()
     stat_df['valDiffSq'] = stat_df['valDiff'].apply(lambda x: x ** 2)
     valDiffSq_mean = stat_df['valDiffSq'].mean()
@@ -712,10 +713,10 @@ def get_basic_stats(stat_df):
     # nse: 1 - sum ((Qs-Qo)**2) / sum((Qo-Qomean)**2)
     stat_df['valDiffA'] = stat_df['valDiff'].apply(lambda x: abs(x))
     valDiffA_mean = stat_df['valDiffA'].mean()
-    obs_mean = stat_df['obs'].mean()
+    obs_mean = stat_df[obs].mean()
     valDiffSq_sum = stat_df['valDiffSq'].sum()
 
-    stat_df['valDiffMean'] = stat_df['obs'].apply(lambda x: x - obs_mean)
+    stat_df['valDiffMean'] = stat_df[obs].apply(lambda x: x - obs_mean)
     stat_df['valDiffSqmean'] = stat_df['valDiffMean'].apply(lambda x: x ** 2)
     valDiffSqmean_sum = stat_df['valDiffSqmean'].sum()
 
@@ -723,10 +724,10 @@ def get_basic_stats(stat_df):
     mae = valDiffA_mean
 
     # correlation coefficient
-    r = stat_df[['obs', 'sim']].corr()['obs'][1]
+    r = stat_df[[obs, sim]].corr()[obs][1]
 
     # bias: Qs-Qo
-    stat_df['bias'] = stat_df['sim'] - stat_df['obs']
+    stat_df['bias'] = stat_df[sim] - stat_df[obs]
     bias = stat_df['bias'].mean()
 
     return rmse, nse, mae, r, bias
