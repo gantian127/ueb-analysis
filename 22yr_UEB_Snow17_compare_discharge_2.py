@@ -10,6 +10,7 @@ This is used to compare the snow17 workflow, ueb workflow, observation discharge
 import calendar
 import os
 from datetime import datetime
+import csv
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -20,7 +21,7 @@ from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_v
 
 
 # user settings
-ueb_file = 'DOLC2_discharge_outlet_7578.ts'
+ueb_file = 'DOLC2_discharge_outlet_rti_1d.ts'
 snow17_file = 'snow17.ts'
 obs_file = 'DOLC2L_F.QME'
 start_time = '1989-10-01'
@@ -127,6 +128,19 @@ text = 'snow17_bias = {}\n' \
 ax2.text(0.02, 0.75, text, transform=ax2.transAxes)
 fig2.savefig(os.path.join(results_dir,'monthly_mean_depth.png'), )
 
+# monthly stats
+stat_path = os.path.join(results_dir,'monthly_mean_stats.csv')
+result_list = [['model', 'rmse', 'nse', 'mae', 'r', 'bias']]
+for key in monthly_mean_dict.keys():
+    result = [key] + list(monthly_mean_dict[key][5])
+    result_list.append(result)
+    result_depth = [key+'_depth'] + list(monthly_mean_dict[key][6])
+    result_list.append(result_depth)
+
+with open(stat_path, "wb") as f:
+    writer = csv.writer(f)
+    writer.writerows(result_list)
+
 
 # annual plot (cms)
 fig3, ax3 = plt.subplots(figsize=(13, 6))
@@ -168,8 +182,21 @@ text = 'snow17_bias = {}\n' \
 ax4.text(0.02, 0.8, text, transform=ax4.transAxes)
 fig4.savefig(os.path.join(results_dir, 'annual_mean_depth.png'), )
 
+# annual stats
+stat_path = os.path.join(results_dir, 'annual_mean_stats.csv')
+result_list = [['model', 'rmse', 'nse', 'mae', 'r', 'bias']]
+for key in monthly_mean_dict.keys():
+    result = [key] + list(annual_mean_dict[key][5])
+    result_list.append(result)
+    result_depth = [key+'_depth'] + list(annual_mean_dict[key][6])
+    result_list.append(result_depth)
 
-# annual plot (cms)
+with open(stat_path, "wb") as f:
+    writer = csv.writer(f)
+    writer.writerows(result_list)
+
+
+# volume error plot (cms)
 fig5, ax5 = plt.subplots(figsize=(13, 6))
 snow17_result = volume_err_dict['snow17'][0][['sim_vol', 'obs_vol']]
 ueb_result = volume_err_dict['ueb'][0][['sim_vol']]
@@ -189,7 +216,7 @@ text = 'snow17_bias = {}\n' \
 ax5.text(0.02, 0.8, text, transform=ax5.transAxes)
 fig5.savefig(os.path.join(results_dir, 'volume_err.png'), )
 
-# annual plot (depth)
+# volumn error plot (depth)
 fig6, ax6 = plt.subplots(figsize=(13, 6))
 snow17_result = volume_err_dict['snow17'][0][['sim_depth', 'obs_depth']]
 ueb_result = volume_err_dict['ueb'][0][['sim_depth']]
@@ -208,5 +235,19 @@ text = 'snow17_bias = {}\n' \
                                         round(volume_err_dict['ueb'][4], 3))
 ax6.text(0.02, 0.8, text, transform=ax6.transAxes)
 fig6.savefig(os.path.join(results_dir, 'volume_err_depth.png'), )
+
+# volumn stats
+stat_path = os.path.join(results_dir, 'volume_err_stats.csv')
+result_list = [['model', 'rmse', 'nse', 'mae', 'r', 'bias']]
+for key in monthly_mean_dict.keys():
+    result = [key] + list(volume_err_dict[key][5])
+    result_list.append(result)
+    result_depth = [key+'_depth'] + list(volume_err_dict[key][6])
+    result_list.append(result_depth)
+
+with open(stat_path, "wb") as f:
+    writer = csv.writer(f)
+    writer.writerows(result_list)
+
 
 print 'analysis is finished'
