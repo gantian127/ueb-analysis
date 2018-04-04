@@ -49,9 +49,9 @@ if os.path.isdir(ueb_dir):
 
     # snow model mass balance ###########################################################
     # error = cump - swe - Wc - cumrmlt - cumEc - cumEs
-    ueb_df['ueb_prcp'] = 1000 * ueb_df['ueb_P']*dt  #TODO: may need to delete 1000 after the model code update
-    ueb_df['ueb_prcp_cum'] = ueb_df['ueb_cump'] # TODO use this dt*ueb_df['ueb_P'].cumsum()
-    ueb_df['ueb_swit_cum'] = dt*ueb_df['ueb_SWIT'].cumsum()  # different from ueb_cumMr
+    ueb_df['ueb_prcp'] = ueb_df['uebPrec']  # or ueb_df['ueb_P']*dt but this has small system error. uebPrec is exactly same as snow17 xmrg
+    ueb_df['ueb_prcp_cum'] = ueb_df['uebPrec'].cumsum()  # or use this dt*ueb_df['ueb_P'].cumsum() but this has small system error.
+    ueb_df['ueb_swit_cum'] = dt*ueb_df['ueb_SWIT'].cumsum()
     ueb_df['ueb_es_cum'] = dt*ueb_df['ueb_Es'].cumsum()
     ueb_df['ueb_ec_cum'] = dt*ueb_df['ueb_Ec'].cumsum()
     ueb_df['ueb_sublimation_cum'] = ueb_df['ueb_ec_cum'] + ueb_df['ueb_es_cum']
@@ -152,6 +152,14 @@ if os.path.isdir(ueb_dir):
                 ax=ax,
                 title='UEB cumulative sublimation check '.format(watershed))
     fig.savefig(os.path.join(result_dir, 'ueb_check_cum_es.png'))
+
+    # plot: check uebPrec, cump
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ueb_df.plot(y=['ueb_cump','ueb_prcp_cum'],
+                ax=ax,
+                title='UEB cumulative precipitation check'.format(watershed))
+    ax.set_ylabel('cumulative precipitation (mm)')
+    fig.savefig(os.path.join(result_dir, 'ueb_check_cum_prcp.png'))
 
     # sac mass balance ################################################################
     # error = cumrmlt - cumsubflow - cumsurflow - storage change - cumET
