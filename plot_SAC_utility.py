@@ -749,7 +749,11 @@ def get_volume_error_stat(DF, watershed_area, start_month=4, end_month=7):
     volume_error_depth = monthly_vol_subset_sum['error_depth'].mean()
     percent_error_depth = sum(monthly_vol_subset_sum['error_depth']) / sum(monthly_vol_subset_sum['obs_depth']) * 100
 
-    return monthly_vol_subset_sum, volume_error, percent_error, volume_error_depth, percent_error_depth
+    # get vol error stats
+    volume_error_stats = get_basic_stats(monthly_vol_subset_sum,obs='obs_vol',sim='sim_vol')
+    volume_error_depth_stats = get_basic_stats(monthly_vol_subset_sum, obs='obs_depth', sim='sim_depth')
+
+    return monthly_vol_subset_sum, volume_error, percent_error, volume_error_depth, percent_error_depth, volume_error_stats, volume_error_depth_stats
 
 
 def get_annual_mean_stat(DF, watershed_area):
@@ -766,7 +770,11 @@ def get_annual_mean_stat(DF, watershed_area):
     bias_mean_depth = annual_mean['bias_depth'].mean()
     percent_bias_depth = sum(annual_mean['bias_depth']) / sum(annual_mean['obs_depth']) * 100
 
-    return annual_mean, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth
+    # annual mean stats
+    annual_mean_stats = get_basic_stats(annual_mean, obs='obs', sim='sim')
+    annual_mean_depth_stats = get_basic_stats(annual_mean, obs='obs_depth', sim='sim_depth')
+
+    return annual_mean, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth, annual_mean_stats, annual_mean_depth_stats
 
 
 def get_monthly_mean_stat(DF, watershed_area):
@@ -786,7 +794,11 @@ def get_monthly_mean_stat(DF, watershed_area):
     bias_mean_depth = monthly_mean_multiyear['bias_depth'].mean()
     percent_bias_depth = sum(monthly_mean_multiyear['bias_depth']) / sum(monthly_mean_multiyear['obs_depth']) * 100
 
-    return monthly_mean_multiyear, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth
+    # monthly mean stats
+    monthly_mean_stats = get_basic_stats(monthly_mean_multiyear, obs='obs',sim='sim')
+    monthly_mean_depth_stats = get_basic_stats(monthly_mean_multiyear, obs='obs_depth', sim='sim_depth')
+
+    return monthly_mean_multiyear, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth, monthly_mean_stats, monthly_mean_depth_stats
 
 
 def get_sim_dataframe(sim_file, group=True, allow_negative=False, start_time='', end_time='', sim_skip=91, time_change_ori=('24', '25'), time_change_new=('23', '1')):
