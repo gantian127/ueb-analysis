@@ -1,11 +1,14 @@
 """
 This is used to compare the snow17 workflow, ueb workflow, observation discharge data as contingency table.
 (2015 Magnusson) Evaluating snow models with varying process representations for hydrological applications
+(1992 Gerrity) A note on Gandin and Murphy's Equitable Skill score
 Gerrity score function: http://www.cawcr.gov.au/projects/verification/#Methods_for_foreasts_of_continuous_variables
 
 results:
-- plot of probability distribution
-- contingency table and Gerrity score
+- Dataframe: sort the values and calcualte the percentile, assign discharge in different level dry, low, medium, high
+- CDF plot of observation discharge
+- contingency table
+- Gerrity score
 """
 
 import os
@@ -63,13 +66,27 @@ for name in DF.columns:
         for percentile in percentile_list[1:]:
             value = DF[DF[percent_col] < percentile][sort_col].ix[-1]
             discharge_threshold.append(value)
+        # CDF plot for observation
+        fig, ax = plt.subplots()
+        plt.margins(0)
+        DF.plot(x=sort_col, y=percent_col, ax=ax,
+                title='Cumulative Distribution of observation discharge at {}'.format(watershed),
+                legend=False)
+        ax.set_xlabel('discharge(cms)')
+        ax.set_ylabel('Probability to not exceed')
+        for x, y in zip(discharge_threshold[:-1], percentile_list[1:-1]):
+            ax.plot([x, x], [y, 0], color='grey',linestyle=':')
+            ax.plot([0, x], [y, y], color='grey',linestyle=':')
+
+        ax.set_yticks(percentile_list[:-1])
+        fig.savefig(os.path.join(result_dir, 'cdf_obs.png'))
 
     # assign discharge level
     DF[level_col] = level_list[0]
     for i in range(0, len(level_list)-1):
         DF[level_col][(DF[name] >= discharge_threshold[i]) & (DF[name] < discharge_threshold[i+1])] = level_list[i+1]
 
-DF.to_csv(os.path.join(result_dir, 'discharge_level.csv'))
+DF.to_csv(os.path.join(result_dir, 'discharge_DF.csv'))
 
 with open(os.path.join(result_dir, 'discharge_threshold.csv'), 'w') as f:
     writer = csv.writer(f)
@@ -114,15 +131,12 @@ for name in ['snow17', 'ueb']:
             elif j > i:
                 S_matrix.ix[i, j] = b*(R_sum+D_sum-(j-i))
                 S_matrix.ix[j, i] = S_matrix.ix[i, j]
-            #
-            # print i, j
-            # print ai_inv_sum
-            # print ai_sum
 
     GS = 1./N * (S_matrix*N_matrix.values).sum().sum()
     GS_result.append([name, GS])
-    cal_df.to_csv(os.path.join(result_dir, 'cal_df_{}.csv'.format(name)))
-    S_matrix.to_csv(os.path.join(result_dir, 'S_matrix_{}.csv'.format(name)))
+
+cal_df.to_csv(os.path.join(result_dir, 'cal_df.csv'))
+S_matrix.to_csv(os.path.join(result_dir, 'S_matrix.csv'))
 
 with open(os.path.join(result_dir, 'GS_result.csv'), 'w') as f:
     writer = csv.writer(f)
