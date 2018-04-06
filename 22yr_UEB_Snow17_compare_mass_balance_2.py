@@ -13,6 +13,7 @@ step:
 """
 
 import os
+import calendar
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -49,8 +50,8 @@ if os.path.isdir(ueb_dir):
 
     # snow model mass balance ###########################################################
     # error = cump - swe - Wc - cumrmlt - cumEc - cumEs
-    ueb_df['ueb_prcp'] = ueb_df['uebPrec']  # or ueb_df['ueb_P']*dt but this has small system error. uebPrec is exactly same as snow17 xmrg
-    ueb_df['ueb_prcp_cum'] = ueb_df['uebPrec'].cumsum()  # or use this dt*ueb_df['ueb_P'].cumsum() but this has small system error.
+    ueb_df['ueb_prcp'] = ueb_df['ueb_P']*dt*1000 #ueb_df['uebPrec']  # or ueb_df['ueb_P']*dt but this has small system error. uebPrec is exactly same as snow17 xmrg
+    ueb_df['ueb_prcp_cum'] = ueb_df['ueb_cump'] #ueb_df['uebPrec'].cumsum()  # or use this dt*ueb_df['ueb_P'].cumsum() but this has small system error.
     ueb_df['ueb_swit_cum'] = dt*ueb_df['ueb_SWIT'].cumsum()
     ueb_df['ueb_es_cum'] = dt*ueb_df['ueb_Es'].cumsum()
     ueb_df['ueb_ec_cum'] = dt*ueb_df['ueb_Ec'].cumsum()
@@ -476,32 +477,67 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_cum_total_et.png'))
 
-    # compare cum total ET: each years
-    subset = concat_df[(concat_df.index.month == 9) & (concat_df.index.day == 30) &
-                                    (concat_df.index.hour == 23)][['ueb_total_et_cum', 'snow17_tet_cum']]
-    annual_total_et_cum = subset.diff()
-    annual_total_et_cum.ix[0] = subset.ix[0]
-    annual_total_et_cum['percent_difference'] = 100*(annual_total_et_cum.snow17_tet_cum - annual_total_et_cum.ueb_total_et_cum)/annual_total_et_cum.snow17_tet_cum
-    fix, ax = plt.subplots(2,1)
-    annual_total_et_cum.plot.box(y=['ueb_total_et_cum',
-                                    'snow17_tet_cum' ],
+    # compare cum total ET: each years time series
+    concat_df['ueb_total_et_cum_yearly'] = concat_df.groupby(pd.TimeGrouper(freq='A-Sep'))['ueb_total_et'].cumsum()
+    concat_df['snow17_total_et_cum_yearly'] = concat_df.groupby(pd.TimeGrouper(freq='A-Sep'))['snow17_tet'].cumsum()
+    annual_total_et_cum = pd.DataFrame(columns=['snow17','ueb'])
+
+    fig, ax = plt.subplots(figsize=(10, 6))  # time series plots
+    for i, group in concat_df.groupby(pd.TimeGrouper(freq='A-Sep')):
+        y1 = group['ueb_total_et_cum_yearly']
+        y2 = group['snow17_total_et_cum_yearly']
+        x = range(0,len(group))
+        ax.plot(x, y1, 'k-',
+                x, y2, 'r:',
+                alpha=0.7,
+                )
+        annual_total_et_cum.at[int(i.year)] = [group['snow17_total_et_cum_yearly'].ix[-1], group['ueb_total_et_cum_yearly'].ix[-1]]
+
+    ax.set_title('Annual cumulative total ET compare between UEB and snow17 at {}'.format(watershed))
+    ax.set_ylabel('Cumulative total ET (mm)')
+    ax.set_xlabel('Month')  # TODO the xlabel is not done
+
+    x_ticks = []
+    x_ticklabels = []
+    month = [x[:3].upper() for x in calendar.month_name if x]
+    for index in group.index:
+        if index.day == 1 and index.hour == 6:
+            x_ticks.append(group.index.get_loc(index))
+            x_ticklabels.append(month[index.month-1])
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(x_ticklabels)
+    fig.savefig(os.path.join(result_dir, 'compare_cum_total_et_annual_ts.png'))
+
+    annual_total_et_cum['diff'] = annual_total_et_cum['snow17'] - annual_total_et_cum['ueb']
+    percent_differnce = annual_total_et_cum['snow17'].sum() - annual_total_et_cum['ueb'].sum()
+    fig, ax = plt.subplots(2, 1, figsize=(13, 10))  # bar plot
+    annual_total_et_cum.plot.bar(y=['snow17',
+                                    'ueb'],
                                  ax=ax[0],
                                  title='Annual cumulative total ET from UEB and Snow17',
-                                 legend=False,
+                                 legend=True,
+                                 rot=0,
                                  )
     ax[0].set_ylabel('Cumulative ET (mm)')
-    ax[0].set_xticklabels(['ueb','snow17'])
 
-    annual_total_et_cum.plot.box(y=['percent_difference'],
-                                 ax=ax[1],
-                                 legend=False,
+    annual_total_et_cum.plot.bar(y=['diff'],
+                                     ax=ax[1],
+                                     title='Difference of the cumulative total ET from UEB and Snow17',
+                                     rot=0,
                                  )
-    ax[1].set_ylabel('cumulative ET difference (%)')
-    ax[1].set_xticklabels(['percent difference (snow17-ueb)/snow17'])
-    fig.savefig(os.path.join(result_dir, 'compare_cum_total_et_box.png'))
+    percent_difference = 100*annual_total_et_cum['diff'].sum()/annual_total_et_cum['snow17'].sum()
+    ax[1].text(0.02, 0.9,
+               'percent difference = {}%'.format(round(percent_difference,2)),
+                transform=ax[1].transAxes, size=9)
+    ax[1].legend(['snow17-ueb'])
+    ax[1].set_xlabel('water year')
+    plt.tight_layout()
+
+    fig.savefig(os.path.join(result_dir, 'compare_cum_total_et_bar.png'))
+    annual_total_et_cum.to_csv(os.path.join(result_dir, 'cum_total_et_annual.csv'))
 
     # compare total ET
-    fig, ax = plt.subplots(2,1, figsize=(10, 8))
+    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     concat_df.plot(y=['ueb_total_et',
                       'snow17_tet'
                       ],
