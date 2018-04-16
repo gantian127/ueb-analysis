@@ -25,7 +25,7 @@ import calendar
 
 # default user settings apply to all steps ####################################################
 # folders/files created by step 2 script
-watershed = 'DOLC2'
+watershed = 'MPHC2'
 folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 model_snow_date_path = os.path.join(result_folder, 'model_snow_date.csv')
@@ -37,7 +37,7 @@ swe_threshold = 1  # mm
 
 # time for analysis:
 start_time = '2000/10/01'
-end_time = '2010/09/30'
+end_time = '2010/06/30'
 
 # new csv file path
 stats_folder = os.path.join(result_folder, 'stats_folder')
@@ -134,8 +134,8 @@ for model in ['snow17', 'ueb']:
         pixel_count = pd.DataFrame.from_csv(pixel_count_path, header=0)
         pixel_count = pixel_count[(pixel_count.weight > 0)]
 
-        # if start_time and end_time:
-        #     pixel_count = pixel_count[(pixel_count.index <= end_time) & (pixel_count.index >= start_time)]
+        if start_time and end_time:
+            pixel_count = pixel_count[(pixel_count.index <= end_time) & (pixel_count.index >= start_time)]
         pixel_count['modis_percent_snow'] = (pixel_count.modis_snow) / (pixel_count.modis_snow + pixel_count.modis_dry)
         pixel_count['swe_percent_snow'] = (pixel_count.swe_snow) / (pixel_count.swe_snow+pixel_count.swe_dry)
 
@@ -150,8 +150,6 @@ for model in ['snow17', 'ueb']:
              / (np.sqrt(sum(pixel_count.weight * np.power((pixel_count.modis_percent_snow - modis_ave), 2)))
                 * np.sqrt(sum(pixel_count.weight * np.power((pixel_count.swe_percent_snow - swe_ave), 2))))
 
-
-
         # calculate correctness and fitness
         # version 2: remove no snow date (at least one source should have snow)
         pixel_count['correctness'] = (pixel_count.A + pixel_count.D) / (pixel_count.C + pixel_count.D + pixel_count.B + pixel_count.A)
@@ -163,127 +161,132 @@ for model in ['snow17', 'ueb']:
 
         # save results
         result_list.append([model, modis_ave, swe_ave, mae, nse, r2, correct])
+
+        # step3 make analysis plots #################################################################################
+        pixel_count['weighted_modis_percent_snow'] = pixel_count['modis_percent_snow'] * pixel_count['weight']
+        pixel_count['weighted_swe_percent_snow'] = pixel_count['swe_percent_snow'] * pixel_count['weight']
         pixel_count.to_csv(pixel_count_path)
+
+        pixel_count_folder = os.path.join(stats_folder, 'pixel_count_{}'.format(model))
+        if not os.path.isdir(pixel_count_folder):
+            os.mkdir(pixel_count_folder)
+
+        # variable distribution in general and in each month #######################################
+        for var in ['weight', 'correctness', 'weighted_modis_percent_snow', 'weighted_swe_percent_snow',
+                    'modis_percent_snow', 'swe_percent_snow']:
+
+            # general distribution plot
+            fig, ax = plt.subplots()
+            pixel_count.hist(column=var,
+                             bins=10,
+                             grid=False,
+                             ec='black',
+                             ax=ax
+                             )
+            ax.set_title('Distribution of {}'.format(var.replace('_', ' ')))
+            ax.set_xlabel(var.replace('_', ' '))
+            fig.savefig(os.path.join(pixel_count_folder, 'dist_{}.png'.format(var)))
+
+            # var distribution in each month
+            month_df = pd.DataFrame(columns=['%g' % x for x in np.arange(0.1, 1.1, 0.1)], index=range(1, 13))
+
+            for i in range(1, 13):
+                var_df = pixel_count[pixel_count.index.month == i][var]
+                value, bins = np.histogram(var_df, range=(0, 1), bins=10)
+                month_df.at[i] = value.tolist()
+
+            month_df['month'] = [x[:3].upper() for x in calendar.month_name if x]
+            month_df['total'] = pixel_count[var].groupby(pixel_count.index.month).agg('count')
+
+            fig, ax = plt.subplots(figsize=(15, 9))
+            month_df.plot.bar(y='total', ax=ax, color='whitesmoke')
+            month_df.plot.bar(y=month_df.columns[:-2],
+                              colormap='YlOrRd',
+                              ax=ax,
+                              title='{} distribution in each month'.format(var.replace('_', ' ')))
+
+            ax.legend(ncol=11, loc='upper right')
+            ax.set_xticklabels([x[:3].upper() for x in calendar.month_name if x])  # , rotation=0)
+            ax.set_xlabel(var.replace('_', ' '))
+            ax.set_ylabel('observation days')
+
+            plt.tight_layout()
+            month_df.to_csv(os.path.join(pixel_count_folder, 'month_bar_{}.csv'.format(var)))
+            fig.savefig(os.path.join(pixel_count_folder, 'month_bar_{}.png'.format(var)))
+
+        # variable compare distribution #############################################
+        var_compare_list = [
+            ('correctness', 'weight'),
+            ('swe_percent_snow', 'correctness'),
+            ('modis_percent_snow', 'correctness'),
+            ('weighted_modis_percent_snow', 'correctness'),
+            ('weighted_swe_percent_snow', 'correctness'),
+            ('swe_percent_snow', 'weight'),
+            ('modis_percent_snow', 'weight'),
+        ]
+
+        for varx, vary in var_compare_list:
+            varx_name = varx.replace('_', ' ')
+            vary_name = vary.replace('_', ' ')
+            fig, ax = plt.subplots()
+            pixel_count.plot.scatter(ax=ax, x=varx, y=vary, title='Compare {} and {}'.format(varx_name, vary_name))
+            fig.savefig(os.path.join(pixel_count_folder, 'compare_{}_{}_scatter.png'.format(varx, vary)))
+
+            # index is varx, each row represents each vary distribution under varx value
+            compare_df = pd.DataFrame(columns=['%g' % x for x in np.arange(0.1, 1.1, 0.1)],
+                                      index=np.arange(0.1, 1.1, 0.1))
+
+            for i in compare_df.index:
+                if i != 1:
+                    range_df = pixel_count[(pixel_count[varx] >= (i - 0.1)) & (pixel_count[varx] < i)][vary]
+                else:
+                    range_df = pixel_count[(pixel_count[varx] >= (i - 0.1)) & (pixel_count[varx] <= i)][vary]
+                compare_df.at[i] = np.histogram(range_df, range=(0, 1), bins=10)[0]
+
+            compare_df['total'] = np.histogram(pixel_count[varx], range=(0, 1), bins=10)[0]
+
+            # does each correctness range have high weight?
+            fig, ax = plt.subplots(figsize=(15, 9))
+            compare_df.plot.bar(y='total',
+                                color='whitesmoke',
+                                ax=ax,
+                                )
+
+            compare_df.plot.bar(y=compare_df.columns[:-1],
+                                colormap='YlOrRd',
+                                ax=ax,
+                                rot=0,
+                                title='{} distribution in each {} range'.format(vary_name, varx_name))
+
+            ax.legend(ncol=11, loc='upper right')
+            ax.set_xlabel(varx_name)
+            ax.set_ylabel('observation days')
+            fig.savefig(os.path.join(pixel_count_folder, 'compare_{}_{}.png'.format(varx, vary)))
+            compare_df.to_csv(os.path.join(pixel_count_folder, 'compare_{}_{}.csv'.format(varx, vary)))
+
+            # does each weight range have good correctness/performance?
+            fig, ax = plt.subplots(figsize=(15, 9))
+            trans = compare_df.transpose()
+            trans.drop('total', inplace=True)
+            trans['total'] = trans.sum(axis=1)
+            trans.plot.bar(y='total',
+                           color='whitesmoke',
+                           ax=ax,
+                           )
+            trans.plot.bar(y=trans.columns[:-1],
+                           colormap='YlOrRd',
+                           ax=ax,
+                           rot=0,
+                           title='{} distribution in each {} range'.format(varx_name, vary_name))
+
+            ax.legend(ncol=11, loc='upper left')
+            ax.set_xlabel(vary_name)
+            ax.set_ylabel('observation days')
+            fig.savefig(os.path.join(pixel_count_folder, 'compare_{}_{}_trans.png'.format(varx, vary)))
+            trans.to_csv(os.path.join(pixel_count_folder, 'compare_{}_{}_trans.csv'.format(varx, vary)))
 
 with open(stat_result_path, "wb") as f:
     writer = csv.writer(f)
     writer.writerows(result_list)
-
-# step3 make analysis plots #################################################################################
-pixel_count['weighted_modis_percent_snow'] = pixel_count['modis_percent_snow'] * pixel_count['weight']
-pixel_count['weighted_swe_percent_snow'] = pixel_count['swe_percent_snow'] * pixel_count['weight']
-
-# variable distribution in general and in each month #######################################
-for var in ['weight', 'correctness', 'weighted_modis_percent_snow', 'weighted_swe_percent_snow','modis_percent_snow','swe_percent_snow']:
-
-    # general distribution plot
-    fig, ax = plt.subplots()
-    pixel_count.hist(column=var,
-                     bins=10,
-                     grid=False,
-                     ec='black',
-                     ax=ax
-                     )
-    ax.set_title('Distribution of {}'.format(var.replace('_', ' ')))
-    ax.set_xlabel(var.replace('_', ' '))
-    fig.savefig(os.path.join(stats_folder, 'dist_{}.png'.format(var)))
-
-    # var distribution in each month
-    month_df = pd.DataFrame(columns=['%g'%x for x in np.arange(0.1, 1.1, 0.1)], index=range(1, 13))
-
-    for i in range(1, 13):
-        var_df = pixel_count[pixel_count.index.month == i][var]
-        value, bins = np.histogram(var_df, range=(0, 1), bins=10)
-        month_df.at[i] = value.tolist()
-
-    month_df['month'] = [x[:3].upper() for x in calendar.month_name if x]
-    month_df['total'] = pixel_count[var].groupby(pixel_count.index.month).agg('count')
-
-    fig, ax = plt.subplots(figsize=(15, 9))
-    month_df.plot.bar(y='total', ax=ax, color='whitesmoke')
-    month_df.plot.bar(y=month_df.columns[:-2],
-                      colormap='YlOrRd',
-                      ax=ax,
-                      title='{} distribution in each month'.format(var.replace('_', ' ')))
-
-    ax.legend(ncol=11, loc='upper right')
-    ax.set_xticklabels([x[:3].upper() for x in calendar.month_name if x]) #, rotation=0)
-    ax.set_xlabel(var.replace('_', ' '))
-    ax.set_ylabel('observation days')
-
-    plt.tight_layout()
-    month_df.to_csv(os.path.join(stats_folder, 'month_bar_{}.csv'.format(var)))
-    fig.savefig(os.path.join(stats_folder, 'month_bar_{}.png'.format(var)))
-
-
-# variable compare distribution #############################################
-var_compare_list = [
-                    ('correctness', 'weight'),
-                    ('swe_percent_snow', 'correctness'),
-                    ('modis_percent_snow', 'correctness'),
-                    ('weighted_modis_percent_snow' ,'correctness'),
-                    ('weighted_swe_percent_snow', 'correctness'),
-                    ('swe_percent_snow', 'weight'),
-                    ('modis_percent_snow', 'weight'),
-                   ]
-
-for varx, vary in var_compare_list:
-    varx_name = varx.replace('_', ' ')
-    vary_name = vary.replace('_', ' ')
-    fig, ax = plt.subplots()
-    pixel_count.plot.scatter(ax=ax, x=varx, y=vary, title='Compare {} and {}'.format(varx_name, vary_name))
-    fig.savefig(os.path.join(stats_folder, 'compare_{}_{}_scatter.png'.format(varx,vary)))
-
-    # index is varx, each row represents each vary distribution under varx value
-    compare_df = pd.DataFrame(columns=['%g'%x for x in np.arange(0.1, 1.1, 0.1)], index=np.arange(0.1, 1.1, 0.1))
-
-    for i in compare_df.index:
-        if i != 1:
-            range_df = pixel_count[(pixel_count[varx] >= (i-0.1)) & (pixel_count[varx] < i)][vary]
-        else:
-            range_df = pixel_count[(pixel_count[varx] >= (i - 0.1)) & (pixel_count[varx] <= i)][vary]
-        compare_df.at[i] = np.histogram(range_df, range=(0, 1), bins=10)[0]
-
-    compare_df['total'] = np.histogram(pixel_count[varx], range=(0, 1), bins=10)[0]
-
-    # does each correctness range have high weight?
-    fig, ax = plt.subplots(figsize=(15, 9))
-    compare_df.plot.bar(y='total',
-                        color='whitesmoke',
-                        ax=ax,
-                        )
-
-    compare_df.plot.bar(y=compare_df.columns[:-1],
-                        colormap='YlOrRd',
-                        ax=ax,
-                        rot=0,
-                        title='{} distribution in each {} range'.format(vary_name, varx_name))
-
-    ax.legend(ncol=11, loc='upper right')
-    ax.set_xlabel(varx_name)
-    ax.set_ylabel('observation days')
-    fig.savefig(os.path.join(stats_folder, 'compare_{}_{}.png'.format(varx, vary)))
-    compare_df.to_csv(os.path.join(stats_folder, 'compare_{}_{}.csv'.format(varx, vary)))
-
-    # does each weight range have good correctness/performance?
-    fig, ax = plt.subplots(figsize=(15, 9))
-    trans = compare_df.transpose()
-    trans.drop('total', inplace=True)
-    trans['total'] = trans.sum(axis=1)
-    trans.plot.bar(y='total',
-                   color='whitesmoke',
-                   ax=ax,
-                   )
-    trans.plot.bar(y=trans.columns[:-1],
-                   colormap='YlOrRd',
-                   ax=ax,
-                   rot=0,
-                   title='{} distribution in each {} range'.format(varx_name, vary_name))
-
-    ax.legend(ncol=11, loc='upper left')
-    ax.set_xlabel(vary_name)
-    ax.set_ylabel('observation days')
-    fig.savefig(os.path.join(stats_folder, 'compare_{}_{}_trans.png'.format(varx, vary)))
-    trans.to_csv(os.path.join(stats_folder, 'compare_{}_{}_trans.csv'.format(varx, vary)))
 
 print 'snow_area_analysis_3: stats calculation is done'
