@@ -93,7 +93,7 @@ for i in range(0, len(output_folders)):
                                    ]
         print [rmse, nse, mae, r, bias]
     # get the best option
-    stat_result['score'] = stat_result['nse'] + stat_result['r']
+    stat_result['score'] = stat_result['rmse'] + stat_result['mae']
     best_folder = stat_result['score'].idxmax()
     best_rmse = stat_result['rmse'].idxmin()
     best_nse = stat_result['nse'].idxmax()
