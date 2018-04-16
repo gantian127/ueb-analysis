@@ -31,17 +31,17 @@ import linecache
 
 
 # user settings ####################################################
-watershed_name = 'DOLC2'
-watershed_area = 1503860000
-obs_file_path = '/uufs/chpc.utah.edu/common/home/ci-water6-1/TianGan/22yr_Animas_watershed_sac/Paul_test_2/data/hisobs/DOLC2L_F.QME'
+watershed_name = 'MPHC2'
+watershed_area = 2117470000
+obs_file_path = '/uufs/chpc.utah.edu/common/home/ci-water6-1/TianGan/22yr_Animas_watershed_sac/Paul_test_2/data/hisobs/MPHC2L_F.QME'
 output_folders = [
                   # 'test_work2_1st',
                   # 'test_work2_2nd_for_plot',
-                    'test_DOLC2_1st',
-                    'test_DOLC2_2nd'
+                    'test_MPHC2_1st',
+                    'test_MPHC2_2nd'
                  ]
 start_time = '1989/10/01'
-end_time = '2010/09/30'
+end_time = '2010/06/30'
 
 
 output2_folders = [
@@ -77,27 +77,32 @@ for i in range(0, len(output_folders)):
     obs = get_obs_dataframe(obs_file_path)
 
     # get the statistics for all the options
-    stat_result = pd.DataFrame(columns=['rmse', 'nse', 'r', 'bias', 'monthly_bias', 'annual_bias', 'vol_err'])
+    stat_result = pd.DataFrame(columns=['rmse', 'nse', 'mae', 'r', 'bias',
+                                        # 'monthly_bias', 'annual_bias', 'vol_err'
+                                        ])
     for column in column_names:
         df = pd.concat([DF[column], obs], axis=1, join_axes=[DF[column].index]).reset_index()
         df.columns = ['time', 'sim', 'obs']
-        rmse, nse, _, r, bias = get_basic_stats(df)
-        _,_,_,_, monthly_bias = get_monthly_mean_stat(df, watershed_area)
-        _,_,_,_, annual_bias = get_annual_mean_stat(df, watershed_area)
-        _,_,_,_, vol_err = get_volume_error_stat(df, watershed_area, start_month=4, end_month=7)
+        rmse, nse, mae, r, bias = get_basic_stats(df)
+        # _,_,_,_, monthly_bias,_,_ = get_monthly_mean_stat(df, watershed_area)
+        # _,_,_,_, annual_bias,_,_ = get_annual_mean_stat(df, watershed_area)
+        # _,_,_,_, vol_err,_,_ = get_volume_error_stat(df, watershed_area, start_month=4, end_month=7)
 
-        stat_result.loc[column] = [rmse, nse, r, bias, monthly_bias, annual_bias, vol_err]
-
+        stat_result.loc[column] = [rmse, nse, mae, r, bias,
+                                   #monthly_bias, annual_bias, vol_err
+                                   ]
+        print [rmse, nse, mae, r, bias]
     # get the best option
-    stat_result['score'] = stat_result['monthly_bias'].abs() + stat_result['annual_bias'].abs() + stat_result['vol_err'].abs()
-    best_folder = stat_result['score'].idxmin()
+    stat_result['score'] = stat_result['nse'] + stat_result['r']
+    best_folder = stat_result['score'].idxmax()
     best_rmse = stat_result['rmse'].idxmin()
     best_nse = stat_result['nse'].idxmax()
+    best_mae = stat_result['mae'].idxmin()
     best_r = stat_result['r'].idxmax()
     best_bias = stat_result['bias'].abs().idxmin()
-    best_month_bias = stat_result['monthly_bias'].abs().idxmin()
-    best_annual_bias = stat_result['annual_bias'].abs().idxmin()
-    best_vol_err = stat_result['vol_err'].abs().idxmin()
+    # best_month_bias = stat_result['monthly_bias'].abs().idxmin()
+    # best_annual_bias = stat_result['annual_bias'].abs().idxmin()
+    # best_vol_err = stat_result['vol_err'].abs().idxmin()
     DF2 = pd.concat([DF[best_folder], obs], axis=1, join='inner')
 
     path = os.path.join(result_dir, 'stat_result_{}.csv'.format(output_folder))
@@ -109,10 +114,13 @@ for i in range(0, len(output_folders)):
             '\n best r = {} '
             '\n best nse= {}'
             '\n best bias = {}'
-            '\n best month_bias= {}'
-            '\n best annual_bias= {}'
-            '\n best vol_err= {}'
-            .format(best_folder, best_rmse, best_r, best_nse, best_bias, best_month_bias, best_annual_bias, best_vol_err)
+            '\n best mae = {}'
+            # '\n best month_bias= {}'
+            # '\n best annual_bias= {}'
+            # '\n best vol_err= {}'
+            .format(best_folder, best_rmse, best_r, best_nse, best_bias, best_mae,
+                    # best_month_bias, best_annual_bias, best_vol_err
+                    )
         )
 
     # plot the time series band plot
@@ -131,23 +139,26 @@ for i in range(0, len(output_folders)):
     ax.text(0.05, 0.8, text, transform=ax.transAxes)
     fig.savefig(os.path.join(result_dir, 'time_series_band_plot_{}.png'.format(output_folder)))
 
-    # plot the boxplot for percent bias
-    fig2, ax2 = plt.subplots()
-    stat_result.boxplot(['annual_bias','monthly_bias','vol_err'], grid=False, ax=ax2)
-    ax2.set_ylabel('percent error (%)')
-    ax2.set_title('Boxplot of different percent bias')
-    ax2.set_xticklabels(['annual mean bias', 'monthly mean bias', 'April-July volume error'])
-    fig2.savefig(os.path.join(result_dir, 'boxplot_of_percent_bias_{}.png'.format(output_folder)))
+    # # plot the boxplot for percent bias
+    # fig2, ax2 = plt.subplots()
+    # stat_result.boxplot(['annual_bias','monthly_bias','vol_err'], grid=False, ax=ax2)
+    # ax2.set_ylabel('percent error (%)')
+    # ax2.set_title('Boxplot of different percent bias')
+    # ax2.set_xticklabels(['annual mean bias', 'monthly mean bias', 'April-July volume error'])
+    # fig2.savefig(os.path.join(result_dir, 'boxplot_of_percent_bias_{}.png'.format(output_folder)))
 
     # plot the boxplot for stats
-    fig3, ax3 = plt.subplots(2, 2, figsize=(10,8))
+    fig3, ax3 = plt.subplots(2, 3, figsize=(15, 8))
     stat_result.boxplot(['nse'], grid=False, ax=ax3[0, 0])
     stat_result.boxplot(['r'], grid=False, ax=ax3[0, 1])
+    stat_result.boxplot(['mae'], grid=False, ax=ax3[0, 2])
     stat_result.boxplot(['rmse'], grid=False, ax=ax3[1, 0])
     stat_result.boxplot(['bias'], grid=False, ax=ax3[1, 1])
     plt.suptitle('Boxplot of basic stats')
+    ax3[0, 2].set_ylabel('discharge(cms)')
     ax3[1, 0].set_ylabel('discharge(cms)')
     ax3[1, 1].set_ylabel('discharge(cms)')
+    plt.tight_layout()
     fig3.savefig(os.path.join(result_dir, 'boxplot_of_basic_stats_{}.png'.format(output_folder)))
 
 
@@ -176,7 +187,6 @@ for i in range(0, len(output2_folders)):
         front_df.boxplot(['penalty'], grid=False, ax=ax5[2])
         plt.suptitle('Boxplot for front000.dat file')
         fig5.savefig(os.path.join(result_dir, 'front000_{}.png'.format(i)))
-
 
 
 # peadj parameter analysis #########################################################################
