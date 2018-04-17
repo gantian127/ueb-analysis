@@ -22,19 +22,18 @@ from plot_SAC_utility import get_sac_ts_dataframe, get_snotel_swe_df, get_obs_da
 
 # Default settings ########################################################
 plt.ioff()
-watershed = 'DOLC2'
-watershed_area = 0
+watershed = 'MPHC2'
 
-snow17_dir = r'D:\Research_Data\Mcphee_DOLC2\snow17_best_time_series'
-ueb_dir = r'D:\Research_Data\Mcphee_DOLC2\UEB_best_time_series'
-snotel_folder_path = r'D:\Research_Data\Mcphee_DOLC2\snotel_swe'
-obs_discharge_path = r'D:\Research_Data\Mcphee_DOLC2\DOLC2L_F.QME'
+snow17_dir = r'D:\Research_Data\Mcphee_MPHC2\snow17_best_time_series'
+ueb_dir = r'D:\Research_Data\Mcphee_MPHC2\ueb_best_time_series_2005'
+snotel_folder_path = r'D:\Research_Data\Mcphee_MPHC2\snotel_swe'
+obs_discharge_path = r'D:\Research_Data\Mcphee_MPHC2\MPHC2L_F.QME'
 
 snow17_skip = 136
 ueb_skip = 121
 
 start_time = '1989-10-1'
-end_time = '2010-9-30'
+end_time = '2005-9-30'
 dt = 6
 
 result_dir = os.path.join(os.getcwd(), 'model_mass_balance_{}_{}'.format(watershed, 'all' if end_time == '' else start_time[:4] + end_time[:4]))
@@ -50,8 +49,8 @@ if os.path.isdir(ueb_dir):
 
     # snow model mass balance ###########################################################
     # error = cump - swe - Wc - cumrmlt - cumEc - cumEs
-    ueb_df['ueb_prcp'] = ueb_df['ueb_P']*dt*1000 #ueb_df['uebPrec']  # or ueb_df['ueb_P']*dt but this has small system error. uebPrec is exactly same as snow17 xmrg
-    ueb_df['ueb_prcp_cum'] = ueb_df['ueb_cump'] #ueb_df['uebPrec'].cumsum()  # or use this dt*ueb_df['ueb_P'].cumsum() but this has small system error.
+    ueb_df['ueb_prcp'] = ueb_df['uebPrec'] #ueb_df['uebPrec']  # or ueb_df['ueb_P']*dt but this has small system error. uebPrec is exactly same as snow17 xmrg
+    ueb_df['ueb_prcp_cum'] = ueb_df['uebPrec'].cumsum() #ueb_df['uebPrec'].cumsum()  # or use this dt*ueb_df['ueb_P'].cumsum() but this has small system error.
     ueb_df['ueb_swit_cum'] = dt*ueb_df['ueb_SWIT'].cumsum()
     ueb_df['ueb_es_cum'] = dt*ueb_df['ueb_Es'].cumsum()
     ueb_df['ueb_ec_cum'] = dt*ueb_df['ueb_Ec'].cumsum()
@@ -59,6 +58,7 @@ if os.path.isdir(ueb_dir):
     ueb_df['ueb_we_total'] = ueb_df['ueb_SWE'] + ueb_df['ueb_Wc']
     ueb_df['ueb_rmlt_cum'] = ueb_df['ueb_xmrg'].cumsum()
     ueb_df['ueb_snow_error'] = ueb_df['ueb_prcp_cum'] - ueb_df['ueb_rmlt_cum'] - ueb_df['ueb_we_total'] - ueb_df['ueb_sublimation_cum']
+
 
     # stat: total sublimation stats
     percent_as_sublimation = 100 * ueb_df['ueb_sublimation_cum'][-1]/ueb_df['ueb_prcp_cum'][-1]
@@ -109,16 +109,16 @@ if os.path.isdir(ueb_dir):
 
     # plot: SWE
     fig, ax = plt.subplots(figsize=(10,5))
-    ueb_df.plot(y=['ueb_Wc', 'ueb_SWE', 'ueb_we_total'],
-                     ax=ax,
-                     title='UEB ground and canopy swe for {}'.format(watershed),
-                     legend=False)
-    ax.legend(['canopy swe',
-               'ground swe',
-               'total swe',
-              ])
-    ax.set_ylabel('SWE(mm)')
 
+    ueb_df.plot.area(y=['ueb_Wc', 'ueb_SWE'],
+                     ax=ax,
+                     style=['grey', 'silver'],
+                     title='UEB ground and canopy swe for {}'.format(watershed),
+                     )
+    ueb_df.plot(y='ueb_we_total', ax=ax)
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(labels=['total swe', 'canopy swe', 'ground swe'], handles=handles)
+    ax.set_ylabel('SWE(mm)')
     fig.savefig(os.path.join(result_dir, 'ueb_swe.png'))
 
     # plot: sublimation
@@ -142,6 +142,7 @@ if os.path.isdir(ueb_dir):
 
     # plot: check cumMr, ueb_swit_cum, ueb_rmlt_cum
     fig, ax = plt.subplots(figsize=(10, 5))
+    ueb_df['ueb_cumMr'] = ueb_df['ueb_cumMr'] - ueb_df['ueb_cumMr'][0]
     ueb_df.plot(y=['ueb_swit_cum', 'ueb_cumMr', 'ueb_rmlt_cum'],
                 ax=ax,
                 title='UEB cumulative rain plus melt check '.format(watershed))
@@ -149,6 +150,7 @@ if os.path.isdir(ueb_dir):
 
     # plot: check cumes, ueb_es_cum
     fig, ax = plt.subplots(figsize=(10, 5))
+    ueb_df['ueb_cumes'] = ueb_df['ueb_cumes'] - ueb_df['ueb_cumes'][0]
     ueb_df.plot(y=['ueb_cumes', 'ueb_es_cum'],
                 ax=ax,
                 title='UEB cumulative sublimation check '.format(watershed))
@@ -156,11 +158,21 @@ if os.path.isdir(ueb_dir):
 
     # plot: check uebPrec, cump
     fig, ax = plt.subplots(figsize=(10, 5))
+    ueb_df['ueb_cump'] = ueb_df['ueb_cump'] - ueb_df['ueb_cump'][0]
     ueb_df.plot(y=['ueb_cump','ueb_prcp_cum'],
                 ax=ax,
                 title='UEB cumulative precipitation check'.format(watershed))
     ax.set_ylabel('cumulative precipitation (mm)')
     fig.savefig(os.path.join(result_dir, 'ueb_check_cum_prcp.png'))
+
+    # plot: check errMB, ueb_snow_error
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ueb_df['ueb_errMB'] = ueb_df['ueb_errMB']*1000 - ueb_df['ueb_errMB'][0]*1000
+    ueb_df.plot(y=['ueb_errMB', 'ueb_snow_error'],
+                ax=ax,
+                title='UEB cumulative snow model error'.format(watershed))
+    ax.set_ylabel('cumulative error (mm)')
+    fig.savefig(os.path.join(result_dir, 'ueb_check_errMB.png'))
 
     # sac mass balance ################################################################
     # error = cumrmlt - cumsubflow - cumsurflow - storage change - cumET
@@ -254,13 +266,16 @@ if os.path.isdir(snow17_dir):
     fig.savefig(os.path.join(result_dir, 'snow17_snow_error.png'))
 
     # plot: SWE
-    fig, ax = plt.subplots(figsize=(10, 5))
-    snow17_df.plot(y=['snow17_we', 'snow17_liqw','snow17_we_total'],
+    fig, ax = plt.subplots(figsize=(10,5))
+    snow17_df.plot.area(y=['snow17_liqw', 'snow17_we'],
                      ax=ax,
+                     style=['grey', 'silver'],
                      title='Snow17 swe and liquid water for {}'.format(watershed),
-                   )
+                     )
+    snow17_df.plot(y='snow17_we_total', ax=ax)
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(labels=['total swe', 'liqw', 'we'], handles=handles)
     ax.set_ylabel('SWE(mm)')
-    ax.legend(['we', 'liqw', 'total swe'])
     fig.savefig(os.path.join(result_dir, 'snow17_we.png'))
 
     # sac mass balance ################################################################
@@ -433,7 +448,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_tet.png'))
 
-    # compare cum tet
+    # compare cum tet: all years
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
     concat_df.plot(y=['ueb_tet_cum',
                       'snow17_tet_cum'
@@ -454,6 +469,66 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     ax[1].set_ylabel('cumulative ET (mm)')
     plt.tight_layout()
     fig.savefig(os.path.join(result_dir, 'compare_cum_tet.png'))
+
+    # compare cum tet: each years time series
+    concat_df['ueb_tet_cum_yearly'] = concat_df.groupby(pd.Grouper(freq='A-Sep'))['ueb_tet'].cumsum()
+    concat_df['snow17_tet_cum_yearly'] = concat_df.groupby(pd.Grouper(freq='A-Sep'))['snow17_tet'].cumsum()
+    annual_tet_cum = pd.DataFrame(columns=['snow17', 'ueb'])
+
+    fig, ax = plt.subplots(figsize=(10, 6))  # time series plots
+    for i, group in concat_df.groupby(pd.Grouper(freq='A-Sep')):
+        y1 = group['ueb_tet_cum_yearly']
+        y2 = group['snow17_tet_cum_yearly']
+        x = range(0, len(group))
+        ax.plot(x, y1, 'g-',
+                x, y2, 'c:',
+                # alpha=0.7,
+                )
+        annual_tet_cum.at[int(i.year)] = [group['snow17_tet_cum_yearly'].ix[-1], group['ueb_tet_cum_yearly'].ix[-1]]
+
+    ax.set_title('Annual cumulative tet compare between UEB and snow17 at {}'.format(watershed))
+    ax.set_ylabel('Cumulative ET (mm)')
+    ax.set_xlabel('Month')
+    ax.legend(['ueb', 'snow17'])
+
+    x_ticks = []
+    x_ticklabels = []
+    month = [x[:3].upper() for x in calendar.month_name if x]
+    for index in group.index:
+        if index.day == 1 and index.hour == 6:
+            x_ticks.append(group.index.get_loc(index))
+            x_ticklabels.append(month[index.month-1])
+    ax.set_xticks(x_ticks)
+    ax.set_xticklabels(x_ticklabels)
+    fig.savefig(os.path.join(result_dir, 'compare_cum_tet_annual_ts.png'))
+
+    annual_tet_cum['diff'] = annual_tet_cum['snow17'] - annual_tet_cum['ueb']
+    percent_differnce = annual_tet_cum['snow17'].sum() - annual_tet_cum['ueb'].sum()
+    fig, ax = plt.subplots(2, 1, figsize=(13, 10))  # bar plot
+    annual_tet_cum.plot.bar(y=['snow17',
+                                'ueb'],
+                                 ax=ax[0],
+                                 title='Annual cumulative total ET from UEB and Snow17',
+                                 legend=True,
+                                 rot=0,
+                                 )
+    ax[0].set_ylabel('Cumulative ET (mm)')
+
+    annual_tet_cum.plot.bar(y=['diff'],
+                            ax=ax[1],
+                            title='Difference of the cumulative total ET from UEB and Snow17',
+                            rot=0,
+                            )
+    percent_difference = 100*annual_tet_cum['diff'].sum()/annual_tet_cum['snow17'].sum()
+    ax[1].text(0.02, 0.9,
+               'percent difference = {}%'.format(round(percent_difference,2)),
+                transform=ax[1].transAxes, size=9)
+    ax[1].legend(['snow17-ueb'])
+    ax[1].set_xlabel('water year')
+    plt.tight_layout()
+
+    fig.savefig(os.path.join(result_dir, 'compare_cum_tet_bar.png'))
+    annual_tet_cum.to_csv(os.path.join(result_dir, 'cum_tet_annual.csv'))
 
     # compare cum total ET: all years
     fig, ax = plt.subplots(2, 1, figsize=(10, 8))
@@ -478,24 +553,25 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     fig.savefig(os.path.join(result_dir, 'compare_cum_total_et.png'))
 
     # compare cum total ET: each years time series
-    concat_df['ueb_total_et_cum_yearly'] = concat_df.groupby(pd.TimeGrouper(freq='A-Sep'))['ueb_total_et'].cumsum()
-    concat_df['snow17_total_et_cum_yearly'] = concat_df.groupby(pd.TimeGrouper(freq='A-Sep'))['snow17_tet'].cumsum()
+    concat_df['ueb_total_et_cum_yearly'] = concat_df.groupby(pd.Grouper(freq='A-Sep'))['ueb_total_et'].cumsum()
+    concat_df['snow17_total_et_cum_yearly'] = concat_df.groupby(pd.Grouper(freq='A-Sep'))['snow17_tet'].cumsum()
     annual_total_et_cum = pd.DataFrame(columns=['snow17','ueb'])
 
     fig, ax = plt.subplots(figsize=(10, 6))  # time series plots
-    for i, group in concat_df.groupby(pd.TimeGrouper(freq='A-Sep')):
+    for i, group in concat_df.groupby(pd.Grouper(freq='A-Sep')):
         y1 = group['ueb_total_et_cum_yearly']
         y2 = group['snow17_total_et_cum_yearly']
         x = range(0,len(group))
-        ax.plot(x, y1, 'k-',
-                x, y2, 'r:',
-                alpha=0.7,
+        ax.plot(x, y1, 'g-',
+                x, y2, 'c:',
+                # alpha=0.7,
                 )
         annual_total_et_cum.at[int(i.year)] = [group['snow17_total_et_cum_yearly'].ix[-1], group['ueb_total_et_cum_yearly'].ix[-1]]
 
     ax.set_title('Annual cumulative total ET compare between UEB and snow17 at {}'.format(watershed))
     ax.set_ylabel('Cumulative total ET (mm)')
     ax.set_xlabel('Month')  # TODO the xlabel is not done
+    ax.legend(['ueb', 'snow17'])
 
     x_ticks = []
     x_ticklabels = []
@@ -592,13 +668,14 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
                       'snow17_discharge'
                       ],
                    ax=ax[0],
+                   style=['-', ':'],
                    title='Compare discharge between UEB and Snow17',
                    )
     ax[0].set_ylabel('discharge(cms)')
 
     if obs_discharge_path:
         obs_discharge = get_obs_dataframe(obs_discharge_path, start_time=start_time, end_time=end_time)
-        obs_discharge.plot(ax=ax[0], style=[':'])
+        obs_discharge.plot.area(ax=ax[0],alpha=0.3)
 
     concat_df.plot(y=['discharge_diff'],
                    ax=ax[1],

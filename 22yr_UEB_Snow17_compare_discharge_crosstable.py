@@ -23,18 +23,17 @@ from plot_SAC_utility import get_obs_dataframe,get_sim_dataframe
 
 
 # Default settings ########################################################
-watershed = 'DOLC2'
-watershed_area = 0
+watershed = 'MPHC2'
 
-obs_file = r'D:\Research_Data\Mcphee_DOLC2\DOLC2L_F.QME'
-ueb_file = r'D:\Research_Data\Mcphee_DOLC2\UEB_best_time_series\DOLC2_discharge_outlet.ts'
-snow17_file = r'D:\Research_Data\Mcphee_DOLC2\snow17_best_time_series\DOLC2_discharge_outlet.ts'
+obs_file = r'D:\Research_Data\Mcphee_MPHC2\MPHC2L_F.QME'
+ueb_file = r'D:\Research_Data\Mcphee_MPHC2\ueb_best_time_series_2005\MPHC2_discharge_outlet.ts'
+snow17_file = r'D:\Research_Data\Mcphee_MPHC2\snow17_best_time_series\MPHC2_discharge_outlet.ts'
 
 snow17_skip = 136
 ueb_skip = 121
 
 start_time = '1989-10-1'
-end_time = '2010-9-30'
+end_time = '2005-9-30'
 dt = 6
 
 result_dir = os.path.join(os.getcwd(), 'discharge_table_analysis_{}_{}'.format(watershed, 'all' if end_time == '' else start_time[:4] + end_time[:4]))
@@ -80,6 +79,7 @@ for name in DF.columns:
             ax.plot([0, x], [y, y], color='grey',linestyle=':')
 
         ax.set_yticks(percentile_list[:-1])
+        ax.set_xticks(discharge_threshold)
         fig.savefig(os.path.join(result_dir, 'cdf_obs.png'))
 
     # assign discharge level
@@ -170,3 +170,5 @@ with open(os.path.join(result_dir, 'PSS_result.csv'), 'w') as f:
 
 cal_df.to_csv(os.path.join(result_dir, 'cal_df.csv'))
 S_matrix.to_csv(os.path.join(result_dir, 'S_matrix.csv'))
+
+print 'analysis is done'

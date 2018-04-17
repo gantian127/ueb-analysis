@@ -21,13 +21,13 @@ from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_v
 
 
 # user settings
-ueb_file = 'DOLC2_discharge_outlet_rti_1d.ts'
-snow17_file = 'snow17.ts'
-obs_file = 'DOLC2L_F.QME'
+ueb_file = r'D:\Research_Data\Mcphee_MPHC2\ueb_best_time_series_2005\MPHC2_discharge_outlet.ts'
+snow17_file = r'D:\Research_Data\Mcphee_MPHC2\snow17_best_time_series\MPHC2_discharge_outlet.ts'
+obs_file = r'D:\Research_Data\Mcphee_MPHC2\MPHC2L_F.QME'
 start_time = '1989-10-01'
-end_time = '2010-09-30'
-watershed_area = 1503860000  # m^2  1503.86 km^2
-watershed_name = 'DOLC2'
+end_time = '2005-09-30'
+watershed_area = 2117470000  # m^2  1503.86 km^2
+watershed_name = 'MPHC2'
 
 plt.ioff()
 
@@ -39,7 +39,7 @@ sim_dict = {
 obs_df = get_obs_dataframe(obs_file,start_time, end_time)
 
 # create result folder
-results_dir = os.path.join(os.getcwd(), 'discharge_snow17_ueb_compare_{}'.format(watershed_name))
+results_dir = os.path.join(os.getcwd(), 'discharge_snow17_ueb_compare_{}_{}'.format(watershed_name,start_time[:4]+end_time[:4]))
 if not os.path.isdir(results_dir):
     os.mkdir(results_dir)
 
@@ -73,6 +73,7 @@ plot_df.columns = ['snow17', 'obs', 'ueb']
 fig, ax = plt.subplots(figsize=(13, 6))
 plot_df.plot.area(y='obs', ax=ax, style=['silver'],x_compat=True)
 plot_df.plot(y=['snow17', 'ueb'], ax=ax, style=['-',':'])
+ax.legend(loc='upper right')
 ax.xaxis.set_major_locator(mdates.YearLocator(1, month=1, day=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 ax.set_title('time series of discharge')
