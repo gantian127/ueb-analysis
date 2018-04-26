@@ -59,12 +59,13 @@ for name in DF.columns:
     level_col = '{}_level'.format(name)
     DF[sort_col] = np.sort(DF[name], axis=0)
     DF[percent_col] = 1.*np.arange(len(obs_df))/(len(obs_df)-1)
+    DF[level_col] = ''
 
     # get discharge level threshold
     if name == 'obs':
         discharge_threshold = []
         for percentile in percentile_list[1:]:
-            value = DF[DF[percent_col] < percentile][sort_col].ix[-1]
+            value = DF[DF[percent_col] <= percentile][sort_col].ix[-1]
             discharge_threshold.append(value)
         # CDF plot for observation
         fig, ax = plt.subplots()
@@ -75,17 +76,19 @@ for name in DF.columns:
         ax.set_xlabel('discharge(cms)')
         ax.set_ylabel('Probability to not exceed')
         for x, y in zip(discharge_threshold[:-1], percentile_list[1:-1]):
-            ax.plot([x, x], [y, 0], color='grey',linestyle=':')
-            ax.plot([0, x], [y, y], color='grey',linestyle=':')
+            ax.plot([x, x], [y, 0], color='grey', linestyle=':')
+            ax.plot([0, x], [y, y], color='grey', linestyle=':')
 
         ax.set_yticks(percentile_list[:-1])
         ax.set_xticks(discharge_threshold)
         fig.savefig(os.path.join(result_dir, 'cdf_obs.png'))
 
     # assign discharge level
-    DF[level_col] = level_list[0]
-    for i in range(0, len(level_list)-1):
-        DF[level_col][(DF[name] >= discharge_threshold[i]) & (DF[name] < discharge_threshold[i+1])] = level_list[i+1]
+    for i in range(0, len(level_list)):
+        if i == 0:
+            DF[level_col][(DF[name] <= discharge_threshold[i])] = level_list[i]
+        else:
+            DF[level_col][(DF[name] > discharge_threshold[i-1]) & (DF[name] <= discharge_threshold[i])] = level_list[i]
 
 DF.to_csv(os.path.join(result_dir, 'discharge_DF.csv'))
 
