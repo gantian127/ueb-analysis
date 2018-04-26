@@ -48,6 +48,7 @@ snow17_df = get_sim_dataframe(snow17_file, start_time=start_time, end_time=end_t
 
 DF = pd.concat([obs_df, ueb_df, snow17_df], axis=1)  # obs should be first used by the loop to get the discharge threshold
 DF.columns = ['obs', 'ueb', 'snow17']  # obs should be first used by the loop to get the discharge threshold
+DF.dropna(inplace=True)
 percentile_list = [0, 0.75, 0.90, 0.99, 1]
 level_list = ['dry', 'low', 'medium', 'high']
 
@@ -58,7 +59,7 @@ for name in DF.columns:
     percent_col = '{}_percent'.format(name)
     level_col = '{}_level'.format(name)
     DF[sort_col] = np.sort(DF[name], axis=0)
-    DF[percent_col] = 1.*np.arange(len(obs_df))/(len(obs_df)-1)
+    DF[percent_col] = 1.*np.arange(len(DF))/(len(DF)-1)
     DF[level_col] = ''
 
     # get discharge level threshold
@@ -87,9 +88,10 @@ for name in DF.columns:
     for i in range(0, len(level_list)):
         if i == 0:
             DF[level_col][(DF[name] <= discharge_threshold[i])] = level_list[i]
+        elif i == len(level_list)-1:
+            DF[level_col][(DF[name] > discharge_threshold[i-1])] = level_list[i]
         else:
             DF[level_col][(DF[name] > discharge_threshold[i-1]) & (DF[name] <= discharge_threshold[i])] = level_list[i]
-
 DF.to_csv(os.path.join(result_dir, 'discharge_DF.csv'))
 
 with open(os.path.join(result_dir, 'discharge_threshold.csv'), 'w') as f:

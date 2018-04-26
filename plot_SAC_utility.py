@@ -703,6 +703,7 @@ def get_volume_error_analysis(DF, watershed_area, save_folder=None, start_month=
 ## functions used for the auto-calibration analysis for all the populations
 def get_basic_stats(input_df, obs='obs', sim='sim'):
     stat_df = input_df[[obs, sim]].copy()
+    stat_df.dropna(axis=0, inplace=True)
     # rmse: sqrt(mean(sum((Qs-Qo)**2)))
     stat_df['valDiff'] = stat_df[obs] - stat_df[sim]
     valDiff_mean = stat_df['valDiff'].mean()
@@ -736,18 +737,24 @@ def get_basic_stats(input_df, obs='obs', sim='sim'):
 def get_volume_error_stat(DF, watershed_area, start_month=4, end_month=7):
     DF['sim_vol'] = DF['sim'] * 24 * 60 * 60
     DF['obs_vol'] = DF['obs'] * 24 * 60 * 60
+    check = DF.set_index('time').resample('M').count()
+    invalid_index = check.index[check.obs_vol < 15]
     monthly_vol = DF.set_index('time').resample('M')['sim_vol', 'obs_vol'].sum()
+    monthly_vol.loc[invalid_index] = np.nan
     monthly_vol_subset = monthly_vol[(monthly_vol.index.month >= start_month) & (monthly_vol.index.month <= end_month)]
+    check2 = monthly_vol_subset.resample('A').count()
+    invalid_index2 = check2.index[check2.obs_vol < end_month-start_month]
     monthly_vol_subset_sum = monthly_vol_subset.resample('A').sum()
+    monthly_vol_subset_sum.loc[invalid_index2] = np.nan
     monthly_vol_subset_sum['error'] = monthly_vol_subset_sum['sim_vol'] - monthly_vol_subset_sum['obs_vol']
     volume_error = monthly_vol_subset_sum['error'].mean()
-    percent_error = sum(monthly_vol_subset_sum['error']) / sum(monthly_vol_subset_sum['obs_vol']) * 100
+    percent_error = monthly_vol_subset_sum['error'].sum() / monthly_vol_subset_sum['obs_vol'].sum() * 100
 
     monthly_vol_subset_sum['sim_depth'] = monthly_vol_subset_sum['sim_vol'] / watershed_area * 1000
     monthly_vol_subset_sum['obs_depth'] = monthly_vol_subset_sum['obs_vol'] / watershed_area * 1000
     monthly_vol_subset_sum['error_depth'] = monthly_vol_subset_sum['sim_depth'] - monthly_vol_subset_sum['obs_depth']
     volume_error_depth = monthly_vol_subset_sum['error_depth'].mean()
-    percent_error_depth = sum(monthly_vol_subset_sum['error_depth']) / sum(monthly_vol_subset_sum['obs_depth']) * 100
+    percent_error_depth = monthly_vol_subset_sum['error_depth'].sum() / monthly_vol_subset_sum['obs_depth'].sum() * 100
 
     # get vol error stats
     volume_error_stats = get_basic_stats(monthly_vol_subset_sum,obs='obs_vol',sim='sim_vol')
@@ -758,17 +765,21 @@ def get_volume_error_stat(DF, watershed_area, start_month=4, end_month=7):
 
 def get_annual_mean_stat(DF, watershed_area):
     # annual mean in discharge
+    check = DF.set_index('time').resample('A-SEP').count()
+    invalid_index = check.index[check.obs <= 260]
     annual_mean = DF.set_index('time').resample('A-SEP').mean()
+    annual_mean.loc[invalid_index] = np.nan
     annual_mean['bias'] = annual_mean['sim'] - annual_mean['obs']
+
     bias_mean = annual_mean['bias'].mean()
-    percent_bias = sum(annual_mean['bias']) / sum(annual_mean['obs']) * 100
+    percent_bias = annual_mean['bias'].sum() / annual_mean['obs'].sum(0) * 100
 
     # annual mean in depth
     annual_mean['sim_depth'] = annual_mean['sim'] * 24 * 3600 * 365.25 * 1000 * (watershed_area ** -1)
     annual_mean['obs_depth'] = annual_mean['obs'] * 24 * 3600 * 365.25 * 1000 * (watershed_area ** -1)
     annual_mean['bias_depth'] = annual_mean['sim_depth'] - annual_mean['obs_depth']
     bias_mean_depth = annual_mean['bias_depth'].mean()
-    percent_bias_depth = sum(annual_mean['bias_depth']) / sum(annual_mean['obs_depth']) * 100
+    percent_bias_depth = annual_mean['bias_depth'].sum() / annual_mean['obs_depth'].sum() * 100
 
     # annual mean stats
     annual_mean_stats = get_basic_stats(annual_mean, obs='obs', sim='sim')
@@ -779,8 +790,8 @@ def get_annual_mean_stat(DF, watershed_area):
 
 def get_monthly_mean_stat(DF, watershed_area):
     # monthly_mean
-    monthly_mean = DF.groupby([DF.time.dt.month, DF.time.dt.year]).mean()
-    monthly_mean_multiyear = monthly_mean.groupby(level=0).mean()
+    monthly_mean = DF.dropna().groupby([DF.time.dt.month, DF.time.dt.year]).mean()  # this creates nan value when data missing
+    monthly_mean_multiyear = monthly_mean.groupby(level=0).mean()  # this is ignoring the nan value
     monthly_mean_multiyear['bias'] = monthly_mean_multiyear['sim'] - monthly_mean_multiyear['obs']
     bias_mean = monthly_mean_multiyear['bias'].mean()
     percent_bias = sum(monthly_mean_multiyear['bias']) / sum(monthly_mean_multiyear['obs']) * 100
@@ -795,7 +806,7 @@ def get_monthly_mean_stat(DF, watershed_area):
     percent_bias_depth = sum(monthly_mean_multiyear['bias_depth']) / sum(monthly_mean_multiyear['obs_depth']) * 100
 
     # monthly mean stats
-    monthly_mean_stats = get_basic_stats(monthly_mean_multiyear, obs='obs',sim='sim')
+    monthly_mean_stats = get_basic_stats(monthly_mean_multiyear, obs='obs', sim='sim')
     monthly_mean_depth_stats = get_basic_stats(monthly_mean_multiyear, obs='obs_depth', sim='sim_depth')
 
     return monthly_mean_multiyear, bias_mean, percent_bias, bias_mean_depth, percent_bias_depth, monthly_mean_stats, monthly_mean_depth_stats
