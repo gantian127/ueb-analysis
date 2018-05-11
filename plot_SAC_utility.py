@@ -177,7 +177,7 @@ def get_sac_ts_dataframe(ts_file_list, start_time='', end_time='', sim_skip=91,
             column_name = '_'.join(os.path.basename(ts_file).split('_')[1:-1])
             raw_sim = pd.read_csv(ts_file, skiprows=sim_skip, header=None, names=['raw'])
             sim_data = raw_sim['raw'].str.split('\s+', expand=True)
-            sim_data.rename(columns={3: column_name }, inplace=True)
+            sim_data.rename(columns={3: column_name}, inplace=True)
             sim_data[column_name] = sim_data[column_name].astype(float)
             for i in range(0, len(time_change_ori)):
                 sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace(time_change_ori[i], time_change_new[i]))
@@ -790,7 +790,10 @@ def get_annual_mean_stat(DF, watershed_area):
 
 def get_monthly_mean_stat(DF, watershed_area):
     # monthly_mean
+    check = DF.dropna().groupby([DF.time.dt.month, DF.time.dt.year]).count()
+    invalid_index = check.index[check.obs <= 27]
     monthly_mean = DF.dropna().groupby([DF.time.dt.month, DF.time.dt.year]).mean()  # this creates nan value when data missing
+    monthly_mean.loc[invalid_index] = np.nan
     monthly_mean_multiyear = monthly_mean.groupby(level=0).mean()  # this is ignoring the nan value
     monthly_mean_multiyear['bias'] = monthly_mean_multiyear['sim'] - monthly_mean_multiyear['obs']
     bias_mean = monthly_mean_multiyear['bias'].mean()
