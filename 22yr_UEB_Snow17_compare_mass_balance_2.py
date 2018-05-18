@@ -288,7 +288,7 @@ if os.path.isdir(snow17_dir):
     snow17_df['snow17_surfaceFlow_cum'] = snow17_df['snow17_surfaceFlow'].cumsum()
     snow17_df['snow17_sac_error'] = snow17_df['snow17_rmlt_cum'] - snow17_df['snow17_storage_change'] - snow17_df['snow17_tet_cum'] \
                                     - snow17_df['snow17_surfaceFlow_cum'] - snow17_df['snow17_subsurfaceFlow_cum']
-    snow17_df['snow17_total_runoff'] = snow17_df['snow17_surfaceFlow'] = snow17_df['snow17_subsurfaceFlow']
+    snow17_df['snow17_total_runoff'] = snow17_df['snow17_surfaceFlow'] + snow17_df['snow17_subsurfaceFlow']
 
     # plot: mass balance and error
     fig, ax = plt.subplots(figsize=(10, 5))
