@@ -171,5 +171,5 @@ for i in range(0, len(swe_gz_folders)):
         with open(os.path.join(result_folder, 'fail_swe_{}.txt'.format(var_name[i])), 'w') as f:
             f.write('\n'.join(fail_swe))
 
-print 'snow_analysis_1: unzip files is done'
+print 'snow_area_analysis_1: unzip files is done'
 

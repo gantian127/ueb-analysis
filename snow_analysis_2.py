@@ -158,4 +158,4 @@ snow_date.to_csv(model_snow_date_path)
 with open(os.path.join(result_folder, 'fail_{}.txt'.format(proj_col_name)), 'w') as f:
     f.write('\n'.join(fail_modis_proj))
 
-print 'snow_analysis_2: swe, modis reprojection, clip, resample is done'
+print 'snow_area_analysis_2: swe, modis reprojection, clip, resample is done'
