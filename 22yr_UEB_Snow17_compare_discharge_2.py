@@ -21,12 +21,21 @@ from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_v
 
 
 # user settings
-ueb_file = r'D:\Research_Data\Mcphee_MPHC2\ueb_best_time_series_2005\MPHC2_discharge_outlet.ts'
-snow17_file = r'D:\Research_Data\Mcphee_MPHC2\snow17_best_time_series\MPHC2_discharge_outlet.ts'
-obs_file = r'D:\Research_Data\Mcphee_MPHC2\MPHC2L_F.QME'
+# s1_ueb_best_mphc2_parameter
+# s2_ueb_best_snow17_grid_ueb_peadj
+# s3_ueb_best_ueb_grid_ueb_peadj
+# s4_ueb_best_ueb_grid_ueb_peadj_drift_factor
+# s5_ueb_best_ueb_grid_ueb_peadj_pcim_grid
+# s6_ueb_best_ueb_grid_ueb_peadj_utcoffset
+# s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor
+
+ueb_file = r'D:\Research_Data\Mcphee_scenarios\s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor\MPHC2\MPHC2_discharge_outlet.ts'
+snow17_file = r'D:\Research_Data\Mcphee_scenarios\snow17_best\MPHC2\MPHC2_discharge_outlet.ts'
+obs_file = r'D:\Research_Data\Mcphee_scenarios\MPHC2L_F.QME'
 start_time = '1989-10-01'
 end_time = '2005-09-30'
-watershed_area = 2117470000  # m^2  1503.86 km^2
+watershed_area = 2117470000 # (DOLC2 1503.86)    (LCCC2 200.451)   (DRRC2 269.822)  (MPHC2 2117.47)
+
 watershed_name = 'MPHC2'
 
 plt.ioff()
@@ -56,7 +65,7 @@ for key, sim_df in sim_dict.items():
     basic_stat_dict[key] = get_basic_stats(DF)
     plot_obs_vs_sim(
                     DF=DF,
-                    figsize=[(15,10), (15,5)],
+                    figsize=[(15, 10), (15,5)],
                     month_interval=12,
                     ts_xlim=[datetime(DF.time[0].year, 1, 1),
                              datetime(DF.time[len(DF) - 1].year, 12, 31)],

@@ -22,18 +22,24 @@ from plot_SAC_utility import get_sac_ts_dataframe, get_snotel_swe_df, get_obs_da
 
 # Default settings ########################################################
 plt.ioff()
-watershed = 'MPHC2'
-
-snow17_dir = r'D:\Research_Data\Mcphee_MPHC2\snow17_best_time_series'
-ueb_dir = r'D:\Research_Data\Mcphee_MPHC2\ueb_best_time_series_2005'
-snotel_folder_path = r'D:\Research_Data\Mcphee_MPHC2\snotel_swe'
-obs_discharge_path = r'D:\Research_Data\Mcphee_MPHC2\MPHC2L_F.QME'
+# s1_ueb_best_mphc2_parameter
+# s2_ueb_best_snow17_grid_ueb_peadj
+# s3_ueb_best_ueb_grid_ueb_peadj
+# s4_ueb_best_ueb_grid_ueb_peadj_drift_factor
+# s5_ueb_best_ueb_grid_ueb_peadj_pcim_grid
+# s6_ueb_best_ueb_grid_ueb_peadj_utcoffset
+# s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor
+watershed = 'DRRC2'
+snow17_dir = r'D:\Research_Data\Mcphee_scenarios\snow17_best\DRRC2'
+ueb_dir = r'C:\Users\jamy\Desktop\DRRC2'
+snotel_folder_path = r'D:\Research_Data\Mcphee_scenarios\snotel_swe'
+obs_discharge_path = r'D:\Research_Data\Mcphee_scenarios\DRRC2H_F.QME'
 
 snow17_skip = 136
 ueb_skip = 121
 
 start_time = '1989-10-1'
-end_time = '2005-9-30'
+end_time = '2010-9-30'
 dt = 6
 
 result_dir = os.path.join(os.getcwd(), 'model_mass_balance_{}_{}'.format(watershed, 'all' if end_time == '' else start_time[:4] + end_time[:4]))
@@ -186,7 +192,7 @@ if os.path.isdir(ueb_dir):
                               - ueb_df['ueb_surfaceFlow_cum'] - ueb_df['ueb_subsurfaceFlow_cum']
     ueb_df['ueb_total_et_cum'] = ueb_df['ueb_sublimation_cum'] + ueb_df['ueb_tet_cum']
     ueb_df['ueb_total_et'] = ueb_df['ueb_Es']*dt + ueb_df['ueb_Ec']*dt + ueb_df['ueb_tet']
-    ueb_df['ueb_total_runoff'] = ueb_df['ueb_surfaceFlow'] = ueb_df['ueb_subsurfaceFlow']
+    ueb_df['ueb_total_runoff'] = ueb_df['ueb_surfaceFlow'] + ueb_df['ueb_subsurfaceFlow']
 
     # plot: mass balance and error
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -714,5 +720,39 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     fig.savefig(os.path.join(result_dir,'compare_combine_swe_discharge.png'))
 
     concat_df.to_csv(os.path.join(result_dir, 'concat_df.csv'))
+
+    # compare flow component:
+    for flow_type in ['surfaceFlow', 'subsurfaceFlow', 'total_runoff',
+                      'primaryFlow', 'supplementalFlow', 'interflow',
+                      'directFlow', 'excessFlow',
+                      'real_lzfpc', 'real_lzfsc', 'real_lztwc',
+                      'real_uzfwc', 'real_uztwc',
+                      'total_storage', 'storage_change'
+                      ]:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax1 = ax.twinx()
+        ax1.invert_yaxis()
+
+        concat_df.plot(y=['ueb_{}'.format(flow_type), 'snow17_{}'.format(flow_type)],
+                       ax=ax)
+        concat_df.plot(y=['ueb_discharge', 'snow17_discharge'],
+                       ax=ax1, legend=False, style=['--', '--'])
+
+        for axis in [ax, ax1]:
+            ylim = axis.get_ylim()
+            axis.set_ylim(ylim[0]*2, ylim[1]*1.5)
+
+        ax.legend(['ueb', 'snow17'], loc='center left')
+
+        if flow_type in ['surfaceFlow', 'subsurfaceFlow', 'total_runoff',
+                      'primaryFlow', 'supplementalFlow', 'interflow',
+                      'directFlow', 'excessFlow']:
+            ax.set_ylabel('{} (mm/{}hr)'.format(flow_type, dt))
+        else:
+            ax.set_ylabel('{} (mm)'.format(flow_type, dt))
+
+        ax1.set_ylabel('discharge(cms)')
+        ax.set_title('Compare of {} and discharge between UEB and Snow17'.format(flow_type))
+        fig.savefig(os.path.join(result_dir, 'compare_discharge_vs_{}.png'.format(flow_type)))
 
 print 'Analysis is done'
