@@ -65,7 +65,7 @@ for key, sim_df in sim_dict.items():
     basic_stat_dict[key] = get_basic_stats(DF)
     plot_obs_vs_sim(
                     DF=DF,
-                    figsize=[(15, 10), (15,5)],
+                    figsize=[(15, 10), (15, 5)],
                     month_interval=12,
                     ts_xlim=[datetime(DF.time[0].year, 1, 1),
                              datetime(DF.time[len(DF) - 1].year, 12, 31)],
@@ -80,20 +80,20 @@ for key, sim_df in sim_dict.items():
 plot_df = pd.concat([sim_dict['snow17'], obs_df, sim_dict['ueb']], axis=1)
 plot_df.columns = ['snow17', 'obs', 'ueb']
 fig, ax = plt.subplots(figsize=(13, 6))
-plot_df.plot.area(y='obs', ax=ax, style=['silver'],x_compat=True)
-plot_df.plot(y=['snow17', 'ueb'], ax=ax, style=['-',':'])
+plot_df.plot.area(y='obs', ax=ax, style=['silver'], x_compat=True)
+plot_df.plot(y=['snow17', 'ueb'], ax=ax, style=['-', ':'])
 ax.legend(loc='upper right')
 ax.xaxis.set_major_locator(mdates.YearLocator(1, month=1, day=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
 ax.set_title('time series of discharge')
 ax.set_ylabel('discharge(cms)')
+ax.set_ylim([0.0, plot_df.max().max()*1.05])
 text = ''
 for key, value in basic_stat_dict.items():
     text += '{} stats:\n' \
             'rmse={}\n' \
             'nse={}\n' \
-            'r={}\n' \
-            'bias={} cms\n\n'.format(key, value[0], value[1], value[3], round(value[4], 3))
+            'bias={} cms\n\n'.format(key, round(value[0], 3), round(value[1], 3), round(value[4], 3))
 ax.text(0.02, 0.6, text, transform=ax.transAxes, size=8)
 fig.savefig(os.path.join(results_dir, 'time_series.png'), )
 
