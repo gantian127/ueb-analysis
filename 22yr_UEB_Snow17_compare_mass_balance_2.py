@@ -29,17 +29,17 @@ plt.ioff()
 # s5_ueb_best_ueb_grid_ueb_peadj_pcim_grid
 # s6_ueb_best_ueb_grid_ueb_peadj_utcoffset
 # s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor
-watershed = 'DRRC2'
-snow17_dir = r'D:\Research_Data\Mcphee_scenarios\snow17_best\DRRC2'
-ueb_dir = r'C:\Users\jamy\Desktop\DRRC2'
+watershed = 'LCCC2'
+snow17_dir = r'D:\Research_Data\Validation\snow17_validation_best\LCCC2'
+ueb_dir = r'D:\Research_Data\Validation\ueb_validation_best\LCCC2'
 snotel_folder_path = r'D:\Research_Data\Mcphee_scenarios\snotel_swe'
-obs_discharge_path = r'D:\Research_Data\Mcphee_scenarios\DRRC2H_F.QME'
+obs_discharge_path = r'D:\Research_Data\Mcphee_scenarios\LCCC2H_F.QME'
 
 snow17_skip = 136
 ueb_skip = 121
 
-start_time = '1989-10-1'
-end_time = '2010-9-30'
+start_time = '2011-10-1'
+end_time = '2015-9-30'
 dt = 6
 
 result_dir = os.path.join(os.getcwd(), 'model_mass_balance_{}_{}'.format(watershed, 'all' if end_time == '' else start_time[:4] + end_time[:4]))
@@ -681,7 +681,8 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
 
     if obs_discharge_path:
         obs_discharge = get_obs_dataframe(obs_discharge_path, start_time=start_time, end_time=end_time)
-        obs_discharge.plot.area(ax=ax[0],alpha=0.3)
+        if len(obs_discharge) != 0:
+            obs_discharge.plot.area(ax=ax[0], alpha=0.3)
 
     concat_df.plot(y=['discharge_diff'],
                    ax=ax[1],
@@ -714,7 +715,7 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
     # ax1.legend(['ueb_discharge', 'snow17_discharge'], loc='upper right')
     ax1.set_ylabel('discharge(cms)')
 
-    if obs_discharge_path:
+    if len(obs_discharge) != 0:
         obs_discharge.plot(ax=ax1, style='g:')
 
     fig.savefig(os.path.join(result_dir,'compare_combine_swe_discharge.png'))
