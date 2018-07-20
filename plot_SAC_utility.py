@@ -1,14 +1,17 @@
 """
 This includes the utilities for SAC-SMA output plots
 """
+import calendar
+import os
+import csv
+import math
+from datetime import datetime, timedelta
+
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pandas as pd
-import math
-from datetime import datetime, timedelta
 import numpy as np
-import calendar
-import os
+
 
 
 def plot_multiple_X_Y(time, data_list,
@@ -174,19 +177,23 @@ def get_sac_ts_dataframe(ts_file_list, start_time='', end_time='', sim_skip=91,
     # get sim daily data
     for ts_file in ts_file_list:
         if os.path.isfile(ts_file):
-            column_name = '_'.join(os.path.basename(ts_file).split('_')[1:-1])
-            raw_sim = pd.read_csv(ts_file, skiprows=sim_skip, header=None, names=['raw'])
-            sim_data = raw_sim['raw'].str.split('\s+', expand=True)
-            sim_data.rename(columns={3: column_name}, inplace=True)
-            sim_data[column_name] = sim_data[column_name].astype(float)
-            for i in range(0, len(time_change_ori)):
-                sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace(time_change_ori[i], time_change_new[i]))
-            sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
-            sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
-            sim_data.drop([0, 1, 2], axis=1, inplace=True)
-            # sim_data.ix[sim_data[column_name] < 0, column_name] = np.nan
-            sim_data = sim_data.set_index('time')
-            df_list.append(sim_data)
+            try:
+                column_name = '_'.join(os.path.basename(ts_file).split('_')[1:-1])
+                raw_sim = pd.read_csv(ts_file, skiprows=sim_skip, header=None, names=['raw'])
+                sim_data = raw_sim['raw'].str.split('\s+', expand=True)
+                sim_data.rename(columns={3: column_name}, inplace=True)
+                sim_data[column_name] = sim_data[column_name].astype(float)
+                for i in range(0, len(time_change_ori)):
+                    sim_data[[2]] = sim_data[[2]].apply(lambda x: x.replace(time_change_ori[i], time_change_new[i]))
+                sim_data['time'] = sim_data[[1, 2]].apply(lambda x: ''.join(x), axis=1)
+                sim_data['time'] = pd.to_datetime(sim_data['time'], format='%d%m%y%H')
+                sim_data.drop([0, 1, 2], axis=1, inplace=True)
+                # sim_data.ix[sim_data[column_name] < 0, column_name] = np.nan
+                sim_data = sim_data.set_index('time')
+                df_list.append(sim_data)
+            except Exception as e:
+                print 'failed for {}'.format(ts_file)
+                continue
 
     DF = pd.concat(df_list, axis=1, join='inner')
     if start_time and end_time:
@@ -298,7 +305,7 @@ def get_statistics(sim, obs):
 def plot_obs_vs_sim(
                     time=None, sim=None, obs=None,
                     DF=None,
-                    figsize=[(15,10),(15,5)],
+                    figsize=[(15, 5), (8, 8), (15, 5)],
                     ts_title='Time series of observation vs. simulation discharge',
                     ts_xlabel='Time',
                     ts_ylabel='Discharge(cms)',
@@ -329,8 +336,17 @@ def plot_obs_vs_sim(
 
     statistics = get_statistics(DF['sim'], DF['obs'])
 
+    # save stats result
+    if save_folder or save_name:
+        txt_path = os.path.join(save_folder if save_folder else os.getcwd(),
+                                'stats_' + save_name.split('.')[0]+'.txt' if save_name else 'stats_time_series.txt')
+        with open(txt_path, 'wb') as csv_file:
+            writer = csv.writer(csv_file)
+            for key, value in statistics.items():
+                writer.writerow([key, round(value,3)])
+
     # plot obs vs sac time series
-    fig, ax = plt.subplots(2, 1, figsize=figsize[0])
+    fig, ax = plt.subplots(figsize=figsize[0])
     Y = [DF['obs'], DF['sim']]
     if reverse:
         Y.reverse()
@@ -341,45 +357,45 @@ def plot_obs_vs_sim(
                       Y,
                       label_list=ts_line_label,
                       linestyle_list=ts_line_style,
-                      ax=ax[0], fig=fig,
+                      ax=ax, fig=fig,
                       xlim=ts_xlim,
                       ylim=ts_ylim,
                        )
-    refine_plot(ax[0], xlabel=ts_xlabel, ylabel=ts_ylabel, title=ts_title,
+    refine_plot(ax, xlabel=ts_xlabel, ylabel=ts_ylabel, title=ts_title,
                 legend=True, interval=month_interval, format=format)
-
-    # plot obs vs sac scatter plot
-    ax[1].scatter(DF['obs'], DF['sim'])
-    refine_plot(ax[1], xlabel=xlabel, ylabel=ylabel, title=title,
-                time_axis=False, legend=False)
-    ax[1].plot([DF['obs'].min(), DF['obs'].max()],
-                [DF['obs'].min(), DF['obs'].max()],
-                linestyle = ':',
-                color='r',
-                )
-    if xlim:
-        ax[1].set_xlim(xlim[0], xlim[1])
-
-    if ylim:
-        ax[1].set_ylim(ylim[0], ylim[1])
-
-    plt.text(DF['obs'].max()*text_position[0], DF['sim'].max()*text_position[1],
-             ' RMSE = {} \n NSE = {} \n R = {} \n Bias = {}cms'.format(statistics['rmse'], statistics['nse'],
-                                                                   statistics['r'], round(statistics['bias'],3)),
-             fontsize=11, color='b')
-
-    plt.tight_layout()
 
     if save_folder or save_name:
         save_fig(fig, save_as=os.path.join(save_folder if save_folder else os.getcwd(),
                                            save_name if save_name else 'time_series.png')
                  )
 
+    # plot obs vs sac scatter plot
+    fig, ax = plt.subplots(figsize=figsize[1])
+    ax.axis('equal')
+    ax.scatter(DF['obs'], DF['sim'])
+    refine_plot(ax, xlabel=xlabel, ylabel=ylabel, title=title,
+                time_axis=False, legend=False)
+    ax.plot([DF['obs'].min(), DF['obs'].max()],
+                [DF['obs'].min(), DF['obs'].max()],
+                linestyle = ':',
+                color='r',
+                )
+    if xlim:
+        ax.set_xlim(xlim[0], xlim[1])
+
+    if ylim:
+        ax.set_ylim(ylim[0], ylim[1])
+
+    if save_folder or save_name:
+        save_fig(fig, save_as=os.path.join(save_folder if save_folder else os.getcwd(),
+                                           'scatter_{}'.format(save_name) if save_name else 'time_series_scatter.png')
+                 )
+
     # plot daily bias
     DF['bias'] = DF['sim'] - DF['obs']
     fig, ax = plot_multiple_X_Y(DF['time'], [DF['bias']],
                                 xlim=ts_xlim,
-                                figsize=figsize[1],
+                                figsize=figsize[2],
                                 label_list=['sim-obs (mean={}'.format(DF['bias'].mean())])
     refine_plot(ax, xlabel='time', ylabel='discharge(cms)',
                 title=daily_bias_title,
