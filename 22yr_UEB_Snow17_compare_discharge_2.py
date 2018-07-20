@@ -29,9 +29,9 @@ from plot_SAC_utility import get_sim_dataframe, get_obs_dataframe, get_DF, get_v
 # s6_ueb_best_ueb_grid_ueb_peadj_utcoffset
 # s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor
 
-ueb_file = r'D:\Research_Data\Mcphee_scenarios\s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor\MPHC2\MPHC2_discharge_outlet.ts'
-snow17_file = r'D:\Research_Data\Mcphee_scenarios\snow17_best\MPHC2\MPHC2_discharge_outlet.ts'
-obs_file = r'D:\Research_Data\Mcphee_scenarios\MPHC2L_F.QME'
+ueb_file = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\s8_ueb_cali_utcoffset_final_best\MPHC2\MPHC2_discharge_outlet.ts'
+snow17_file = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\snow17_best\MPHC2\MPHC2_discharge_outlet.ts'
+obs_file = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\MPHC2L_F.QME'
 start_time = '1989-10-01'
 end_time = '2005-09-30'
 watershed_area = 2117470000 # (DOLC2 1503.86)    (LCCC2 200.451)   (DRRC2 269.822)  (MPHC2 2117.47)
@@ -65,12 +65,13 @@ for key, sim_df in sim_dict.items():
     basic_stat_dict[key] = get_basic_stats(DF)
     plot_obs_vs_sim(
                     DF=DF,
-                    figsize=[(15, 10), (15, 5)],
+                    figsize=[(15, 5), (8, 8), (15, 5)],
                     month_interval=12,
                     ts_xlim=[datetime(DF.time[0].year, 1, 1),
                              datetime(DF.time[len(DF) - 1].year, 12, 31)],
                     format='%Y',
                     ts_title='Time series of observation vs. simulation discharge for ({}+sac)'.format(key),
+                    title='Scatter plot of observation vs. simulation discharge for ({}+sac)'.format(key),
                     daily_bias_title='Daily mean bias for ({}+sac)'.format(key),
                     save_folder=results_dir,
                     save_name='time_series_{}.png'.format(key),
