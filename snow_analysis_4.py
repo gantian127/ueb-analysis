@@ -155,6 +155,8 @@ for model in ['snow17', 'ueb']:
 
         plt.tight_layout()
         fig.savefig(os.path.join(stats_folder, 'valid_date_stats_{}.png'.format(model)))
+        valid_date_month.to_csv(os.path.join(stats_folder,'valid_date_month_{}.csv'.format(model)))
+        valid_date_annual.to_csv(os.path.join(stats_folder,'valid_date_annual_{}.csv'.format(model)))
 
         #  all years stats ############################################################################
         stats = get_snow_stats(pixel_count)
