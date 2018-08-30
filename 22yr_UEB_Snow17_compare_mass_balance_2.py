@@ -22,24 +22,25 @@ from plot_SAC_utility import get_sac_ts_dataframe, get_snotel_swe_df, get_obs_da
 
 # Default settings ########################################################
 plt.ioff()
-# s1_ueb_best_mphc2_parameter
-# s2_ueb_best_snow17_grid_ueb_peadj
-# s3_ueb_best_ueb_grid_ueb_peadj
-# s4_ueb_best_ueb_grid_ueb_peadj_drift_factor
-# s5_ueb_best_ueb_grid_ueb_peadj_pcim_grid
-# s6_ueb_best_ueb_grid_ueb_peadj_utcoffset
-# s7_ueb_best_ueb_grid_ueb_peadj_utcoffset_drift_factor
-watershed = 'LCCC2'
-snow17_dir = r'D:\Research_Data\Validation\snow17_validation_best\LCCC2'
-ueb_dir = r'D:\Research_Data\Validation\ueb_validation_best\LCCC2'
-snotel_folder_path = r'D:\Research_Data\Mcphee_scenarios\snotel_swe'
-obs_discharge_path = r'D:\Research_Data\Mcphee_scenarios\LCCC2H_F.QME'
+# DOLC2
+watershed = 'DOLC2_test'
+snow17_dir = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\snow17_best\DOLC2'
+ueb_dir = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\s8_ueb_cali_utcoffset_final_best\DOLC2'
+snotel_folder_path = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\snotel_swe'
+obs_discharge_path = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\QME_DOLC2L_F.QME'
+
+# # Dillon
+# watershed = 'TCFC2'
+# snow17_dir = r'D:\Research_Data\Model_Experiments\TCFC2_mass_balance_check\snow17'
+# ueb_dir = r'D:\Research_Data\Model_Experiments\TCFC2_mass_balance_check\ueb_df1'
+# snotel_folder_path = r'D:\Research_Data\3_Dillon\snotel'
+# obs_discharge_path = r'D:\Research_Data\3_Dillon\obs_discharge\QME_TCFC2H_F.QME'
 
 snow17_skip = 136
 ueb_skip = 121
 
-start_time = '2011-10-1'
-end_time = '2015-9-30'
+start_time = '2005-10-1'
+end_time = '2009-09-30'
 dt = 6
 
 result_dir = os.path.join(os.getcwd(), 'model_mass_balance_{}_{}'.format(watershed, 'all' if end_time == '' else start_time[:4] + end_time[:4]))
@@ -426,6 +427,54 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
         ax.set_ylabel('SWE(mm)')
         fig.savefig(os.path.join(result_dir, 'compare_swe_snotel.png'))
 
+    # compare SWIT ####################################################
+    concat_df['rmlt_cum_diff'] = concat_df['ueb_rmlt_cum'] - concat_df['snow17_rmlt_cum']
+    concat_df['rmlt_diff'] = concat_df['ueb_xmrg'] - concat_df['snow17_rmlt']
+
+    fig, ax = plt.subplots(2,1, figsize=(10, 8))
+    concat_df.plot(y=['ueb_xmrg',
+                      'snow17_rmlt'
+                      ],
+                   ax=ax[0],
+                   title='Compare rain plus melt between UEB and Snow17',
+                   legend=False,
+                   )
+
+    ax[0].legend(['ueb', 'snow17'])
+    ax[0].set_ylabel('rmlt(mm/{}hr)'.format(dt))
+
+    concat_df.plot(y=['rmlt_diff'],
+                   ax=ax[1],
+                   title='Difference of rain plus melt between UEB and Snow17',
+                   legend=False,
+                   )
+    ax[1].set_ylabel('rmlt(mm/{}hr)'.format(dt))
+    ax[1].legend(['ueb-snow17'])
+    plt.tight_layout()
+    fig.savefig(os.path.join(result_dir, 'compare_rmlt.png'))
+
+    fig, ax = plt.subplots(2,1, figsize=(10, 8))
+    concat_df.plot(y=['ueb_rmlt_cum',
+                      'snow17_rmlt_cum'
+                      ],
+                   ax=ax[0],
+                   title='Compare cumulative rain plus melt between UEB and Snow17',
+                   legend=False,
+                   )
+
+    ax[0].legend(['ueb', 'snow17'])
+    ax[0].set_ylabel('water input(mm)')
+
+    concat_df.plot(y=['rmlt_cum_diff'],
+                   ax=ax[1],
+                   title='Difference of cumulative rain plus melt between UEB and Snow17',
+                   legend=False,
+                   )
+    ax[1].set_ylabel('water output(mm)')
+    ax[1].legend(['ueb-snow17'])
+    plt.tight_layout()
+    fig.savefig(os.path.join(result_dir, 'compare_cum_rmlt.png'))
+
     # compare ET  #####################################################
     concat_df['tet_diff'] = concat_df['ueb_tet'] - concat_df['snow17_tet']
     concat_df['tet_cum_diff'] = concat_df['ueb_tet_cum'] - concat_df['snow17_tet_cum']
@@ -755,5 +804,10 @@ if os.path.isdir(ueb_dir) and os.path.isdir(snow17_dir):
         ax1.set_ylabel('discharge(cms)')
         ax.set_title('Compare of {} and discharge between UEB and Snow17'.format(flow_type))
         fig.savefig(os.path.join(result_dir, 'compare_discharge_vs_{}.png'.format(flow_type)))
+
+    # save mass balance table  #####################################################
+    ueb_df.ix[-1].to_csv(os.path.join(result_dir,'ueb_df_table.csv'))
+    snow17_df.ix[-1].to_csv(os.path.join(result_dir,'snow17_df_table.csv'))
+
 
 print 'Analysis is done'
