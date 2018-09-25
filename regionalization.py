@@ -2,8 +2,6 @@
 This is the regionalization code from RTI.
 """
 
-# import
-#
 import os
 import pandas as pd
 from numpy import genfromtxt
@@ -20,7 +18,6 @@ import datetime
 from scipy.special import comb
 
 # define functions  ##############################################################################################
-
 def GetHydrographs2(Basin, PID):
     QSRC = ColumnDataSource(data=dict(Time=[], Obs=[], Mod=[]))
     rootdir = NASA_RUNS + Basin + '_96' + '\\'
@@ -350,6 +347,9 @@ for Basin in Basins:
 
 
 # cell 15  ###################
+# used to compare the parameter values with other basins which are not in the regionalization
+# mainly plot for check.
+
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -526,6 +526,10 @@ for i in range(0,len(best_pareto_2[0])):
 
 
 # cell 22  #####################################
+# check the final regionalization results to see if the parameters is good
+# for double check of the results
+# separate the plotting code with regionalization code
+
 # All 5 basins
 FixOrNot3 = np.copy(FixOrNot)
 FixOrNot3[IncludeForRegionalization > 0] = best_pareto_2[0]
