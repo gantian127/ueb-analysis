@@ -19,20 +19,23 @@ import pandas as pd
 # step 1 user settings  ####################################################
 watershed = 'McPhee'
 
-start_date = '1992/10/1'
-end_date = '1993/09/30'
+start_date = '1989/10/1'
+end_date = '2010/06/30'
+
+ueb_dir = r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/ueb_sublimation_test/SAC_out/'
+snow17_dir = r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/snow17_best/SAC_out_sublimation_test/'
 
 var_gz_folders = {
 
-    'uebPrec': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/ueb_sublimation_test/SAC_out/uebPrec',
-    'ueb_Ec': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/ueb_sublimation_test/SAC_out/ueb_Ec',
-    'ueb_Es': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/ueb_sublimation_test/SAC_out/ueb_Es',
-    'ueb_tet': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/ueb_sublimation_test/SAC_out/tet',
-    'ueb_rmlt': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/ueb_sublimation_test/SAC_out/xmrg',
+    'uebPrec': os.path.join(ueb_dir, 'uebPrec'),
+    'ueb_Ec': os.path.join(ueb_dir, 'ueb_Ec'),
+    'ueb_Es': os.path.join(ueb_dir, 'ueb_Es'),
+    'ueb_tet': os.path.join(ueb_dir, 'tet'),
+    'ueb_rmlt': os.path.join(ueb_dir, 'xmrg'),
 
-    'snow17_xmrg': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/snow17_best/SAC_out_sublimation_test/xmrg',
-    'snow17_rmlt': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/snow17_best/SAC_out_sublimation_test/rmlt',
-    'snow17_tet': r'/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/snow17_best/SAC_out_sublimation_test/tet',
+    'snow17_xmrg': os.path.join(snow17_dir, 'xmrg'),
+    'snow17_rmlt': os.path.join(snow17_dir, 'rmlt'),
+    'snow17_tet': os.path.join(snow17_dir, 'tet'),
 }
 
 # create results folder
@@ -43,7 +46,7 @@ if not os.path.isdir(result_folder):
 
 
 # step2 : unzip .gz file to assigned folder ####################################
-date_index = pd.date_range(start_date,end_date, freq='6H')
+date_index = pd.date_range(start_date, end_date, freq='6H')
 xmrg_df = pd.DataFrame(index=date_index, columns=var_gz_folders.keys())
 
 for var, var_gz_folder in var_gz_folders.items():

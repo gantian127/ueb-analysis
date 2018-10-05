@@ -23,14 +23,13 @@ from matplotlib import pyplot as plt
 from snow_cover_utility import array_to_raster
 
 # user settings ####################################################
-terrain_folder = '/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/Sublimation_analysis/terrain/'
 watershed = 'McPhee'
 folder_name = '{}_sublimation_analysis'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 
-start_time = '1992/10/01'
-end_time = '1993/09/30'
-yr = 1.0
+start_time = '1989/10/01'
+end_time = '2009/10/01'  # this will exclude the end_time date e.g will only include data before 10/01.
+yr = 20.0
 dt = 6.0
 
 
@@ -52,7 +51,7 @@ var_array_annual_mean_dict = {}
 # get exiting variable array
 tif_df = pd.DataFrame.from_csv(tif_df_path, header=0)
 if start_time and end_time:
-    tif_df = tif_df[(tif_df.index >= start_time) & (tif_df.index <= end_time)]
+    tif_df = tif_df[(tif_df.index >= start_time) & (tif_df.index < end_time)]
 
 for var in var_list:
     var_stack_list = []
@@ -128,14 +127,14 @@ if domain_ave_plot:
         right_bar = [x+width/2 for x in ind]
 
         p1 = plt.bar(left_bar, prec, width=width, color='dodgerblue')
-        p2 = plt.bar(left_bar,adj_prec, width=width, bottom=prec, color='skyblue')
+        p2 = plt.bar(left_bar, adj_prec, width=width, bottom=prec, color='skyblue')
         p3 = plt.bar(right_bar, tet, width=width, color='g')
         p4 = plt.bar(right_bar, sub, width=width, bottom=tet, color='palegreen')
 
         plt.xticks(ind, ('UEB', 'SNOW-17'))
         plt.ylabel('water input/output (mm)')
         plt.legend((p1[0], p2[0], p3[0], p4[0]),
-                   ('Precipitation','Adjusted water', 'ET', 'Sublimation'))
+                   ('Precipitation', 'Adjusted water', 'ET', 'Sublimation'))
         plt.savefig(os.path.join(stats_folder, 'domain_ave_bar.png'))
 
 print 'sublimation_analysis_3: variable array and array stats tif is done'
