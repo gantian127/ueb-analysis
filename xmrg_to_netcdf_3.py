@@ -69,7 +69,7 @@ for var in tif_df.columns:
 
     # define time variable
     time_dim = root.createDimension("time", None)
-    time_var = root.createVariable("time", "f8", ("time",))
+    time_var = root.createVariable("time", "f4", ("time",))
     time_var.units = 'hours since {} 00:00:00.0 UTC'.format(tif_df.index[0].strftime('%Y-%m-%d'))
     time_var.calendar = 'standard'
     time_dates = tif_df.index.tolist() # use netcdf string conversion function
