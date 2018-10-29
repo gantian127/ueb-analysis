@@ -3,7 +3,7 @@ This is used for the use case in netCDF paper. It converts the RDHM xmrg output 
 
 step3: get tif data and write as netCDF file
 
-steps:
+steps: (17min/22yr)
 - get tif file and create netCDF template
 - read all the tif file and create as numpy array
 - add numpy array in the netCDF template
