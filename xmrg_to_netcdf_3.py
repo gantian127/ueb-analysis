@@ -30,7 +30,7 @@ tif_flip = True
 flip_axis = 1
 
 start_date = '1988-10-1'
-end_date = '1989-10-1'
+end_date = '2010-06-30'
 
 # step2: get tif data #######################################################
 tif_df = pd.read_csv(tif_df_path, header=0, index_col=0)
@@ -82,7 +82,8 @@ for var in tif_df.columns:
     grid_mapping = band.grid_mapping
     fill_value = band_data.get_fill_value()
 
-    nc_var = root.createVariable(var, 'f8', ("time", "y", "x"), fill_value=fill_value) # remember to specify fill value otherwise will show strange data
+    # remember to specify fill value otherwise will show strange data, the data type is 32 float.
+    nc_var = root.createVariable(var, 'f4', ("time", "y", "x"), fill_value=fill_value)
     nc_var.grid_mapping = grid_mapping
     tif_array_data = np.load(os.path.join(result_folder, '{}_tif_array.npy'.format(var)))
     tif_array_mask = np.repeat(mask[np.newaxis, :, :], tif_array_data.shape[0], axis=0)
@@ -103,4 +104,5 @@ for var in tif_df.columns:
     subprocess.Popen(shlex.split(nco_cmd)).wait()
 
 print 'xmrg to netCDF is done!'
+
 
