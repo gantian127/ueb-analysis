@@ -1,7 +1,7 @@
 """
 This is aimed to convert the raw STC-SSP snow data to raster data. This code is based on the RTI info and python code
 
-steps:
+steps: (30min/year)
 - create hdf5 as asc
 - convert asc to tif with RDHM projection
 
@@ -34,42 +34,48 @@ PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northi
 
 # step 2: .mat to .asc ################################################################
 for year in range(start_year, end_year+1):
-    # Get data from hdf
-    with h5py.File(os.path.join(hdf5_dir, 'UpperColorado_CY{}.mat'.format(year)), 'r') as f:
-        sc_data = np.array(f['Sc'])
-        RefMatrix = np.array(f['RefMatrix'])
 
-    # Define asc header
-    nrows = np.shape(np.transpose(sc_data[0]))[0]
-    ncols = np.shape(np.transpose(sc_data[0]))[1]
-    xll = RefMatrix[0][-1]
-    yll = RefMatrix[1][-1] - (nrows * RefMatrix[0][1])
+    mat_file = os.path.join(hdf5_dir, 'UpperColorado_CY{}.mat'.format(year))
 
-    header_txt = "ncols " + str(ncols) + "\n\
-    nrows " + str(nrows) + "\n\
-    xllcorner " + str(xll) + "\n\
-    yllcorner " + str(yll) + "\n\
-    cellsize " + str(RefMatrix[0][1]) + "\n\
-    NODATA_value -32768"
+    if os.path.isfile(mat_file):
+        # Get data from hdf
+        with h5py.File(mat_file, 'r') as f:
+            sc_data = np.array(f['Sc'])
+            RefMatrix = np.array(f['RefMatrix'])
 
-    dates = pd.date_range('1/1/' + str(year), '12/31/' + str(year))
-    for index, day in enumerate(dates):
-        try:
-            # Create .asc files
-            asc_path = os.path.join(result_dir, 'STC_SSP_{}_Sc.asc'.format(dates[index].strftime("%Y%m%d")))
-            tif_path = asc_path.replace('.asc', '.tif')
-            np.savetxt(asc_path,
-                       np.transpose(sc_data[index]),
-                       delimiter=' ', fmt='%1.6e', header=header_txt, comments='')
+        # Define asc header
+        nrows = np.shape(np.transpose(sc_data[0]))[0]
+        ncols = np.shape(np.transpose(sc_data[0]))[1]
+        xll = RefMatrix[0][-1]
+        yll = RefMatrix[1][-1] - (nrows * RefMatrix[0][1])
 
-            # convert .asc to .tif files
-            cmd = 'gdalwarp -overwrite -s_srs "{}" -t_srs "{}"  -tr 463.3127165 463.3127165 {} {}'.format(sinus_string, polar_string,  asc_path, tif_path)
-            subprocess.Popen(shlex.split(cmd))
-        except Exception as e:
-            print 'failed for {}'.format(day)
+        header_txt = "ncols " + str(ncols) + "\n\
+        nrows " + str(nrows) + "\n\
+        xllcorner " + str(xll) + "\n\
+        yllcorner " + str(yll) + "\n\
+        cellsize " + str(RefMatrix[0][1]) + "\n\
+        NODATA_value -32768"
 
-    # clear space
-    del sc_data
-    del RefMatrix
+        dates = pd.date_range('1/1/' + str(year), '12/31/' + str(year))
+        for index, day in enumerate(dates):
+            try:
+                # Create .asc files
+                asc_path = os.path.join(result_dir, 'STC_SSP_{}_Sc.asc'.format(dates[index].strftime("%Y%m%d")))
+                tif_path = asc_path.replace('.asc', '.tif')
+                np.savetxt(asc_path,
+                           np.transpose(sc_data[index]),
+                           delimiter=' ', fmt='%1.6e', header=header_txt, comments='')
+
+                # convert .asc to .tif files
+                cmd = 'gdalwarp -overwrite -s_srs "{}" -t_srs "{}"  -tr 463.3127165 463.3127165 {} {}'.format(sinus_string, polar_string,  asc_path, tif_path)
+                subprocess.Popen(shlex.split(cmd))
+            except Exception as e:
+                print 'failed for {}'.format(day)
+
+        # clear space
+        del sc_data
+        del RefMatrix
+    else:
+        print 'No hdf5 {}'.format(mat_file)
 
 print 'File conversion is done!'
