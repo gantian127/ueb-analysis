@@ -44,7 +44,7 @@ ueb_skip = 121
 snow17_skip = 136
 # snow_threshold = 0
 start_time = '2001-10-01'
-end_time = '2001-10-05'
+end_time = '2010-06-30'
 
 # user settings
 swe_gz_folders = [
