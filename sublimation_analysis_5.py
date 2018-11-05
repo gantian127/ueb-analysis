@@ -10,6 +10,7 @@ requirement:
 results:
 - bar plot: open/forest land type sublimation components compare
 - scatter plot: elevation vs total ET, prec for different land type
+- scatter plot: elevation vs canopy ET, prec for different forest type (mainly use the elev vs Ec, elev vs prec)
 
 # how lai, cc, hcan prepared
 nlcd_type_dict = {
@@ -52,6 +53,7 @@ terrain_folder = '/Projects/Tian_workspace/rdhm_ueb_modeling/Dillon/Sublimation_
 dem_file = os.path.join(terrain_folder, 'Dillon_dem_watershed_clip.tif')
 lai_file = os.path.join(terrain_folder, 'ueb_lai.tif')
 cc_file = os.path.join(terrain_folder, 'ueb_cc.tif')
+hcan_file = os.path.join(terrain_folder,'ueb_hcan.tif')
 aspect_file = os.path.join(terrain_folder, 'ueb_aspect.tif')
 
 var_dict = {'ueb_Ec': 'canopy subilmation (mm)',
@@ -150,8 +152,46 @@ for var, units in var_dict.items():
 
         fig.savefig(os.path.join(stats_folder, 'scatter_{}.png'.format(var)))
 
+
+# step 3 forest type and sublimation ############################################################
+# create index for land type
+hcan_array = gdalnumeric.LoadFile(hcan_file)
+forest_shrub = (hcan_array == 3)
+forest_deciduous = (hcan_array == 8)
+forest_evergreen = (hcan_array == 15)
+# forest_mix = (hcan_array == 10)
+
+
+dem_array = gdalnumeric.LoadFile(dem_file)
+dem_area = (dem_array[0] > 0)
+
+forest_index_shrub = (dem_area & forest_shrub)
+forest_index_deciduous = (dem_area & forest_deciduous)
+forest_index_evergreen = (dem_area & forest_evergreen)
+# forest_index_mix = (dem_area & forest_mix)
+
+
+# create scatter plot for var vs elevation
+for var, units in var_dict.items():
+    var_mean_path = os.path.join(stats_folder, 'annual_mean_{}.tif'.format(var))
+    if os.path.isfile(var_mean_path):
+        var_sum_array = gdalnumeric.LoadFile(var_mean_path)
+        fig, ax = plt.subplots(figsize=(8, 6))
+        for index_array, point_style in zip([forest_index_shrub, forest_index_deciduous, forest_index_evergreen],
+                                            ['o', 'o', 'o']):
+            index = index_array.flatten()
+            dem_1d = dem_array[0].flatten()
+            var_1d = var_sum_array.flatten()
+
+            dem_values = dem_1d[index]
+            var_values = var_1d[index]
+
+            ax.plot(dem_values.tolist(), var_values.tolist(), point_style, alpha=0.8)
+        ax.set_xlabel('Elevation(m)')
+        ax.set_ylabel(units)
+        ax.legend(['shrub', 'deciduous', 'evergreen', 'mix'])
+
+        fig.savefig(os.path.join(stats_folder, 'scatter_forest_{}.png'.format(var)))
+
+
 print 'sublimation_analysis_5: land type sublimation analysis is done'
-
-
-
-
