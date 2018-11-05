@@ -34,7 +34,6 @@ nlcd_type_dict = {
 }   # https://www.mrlc.gov/nlcd11_stat.php
 """
 
-
 import os
 import csv
 
@@ -45,7 +44,7 @@ import gdalnumeric
 
 
 # user settings  ####################################################################################################
-watershed = 'McPhee'
+watershed = 'Dillon'
 folder_name = '{}_sublimation_analysis'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 stats_folder = os.path.join(result_folder, 'stats_folder')
@@ -53,7 +52,8 @@ stats_folder = os.path.join(result_folder, 'stats_folder')
 start_year = 1989  # year for start date 1989-10-01
 end_year = 2009   # year for end date 2009-9-30
 
-terrain_folder = '/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/Sublimation_analysis/analysis_22yr/terrain/'
+ueb_adj=True
+terrain_folder = '/Projects/Tian_workspace/rdhm_ueb_modeling/Dillon/Sublimation_analysis/terrain/'
 lai_file = os.path.join(terrain_folder, 'ueb_lai.tif')
 
 var_dict = {'ueb_Ec': 'canopy subilmation (mm)',
@@ -104,7 +104,10 @@ for year in range(start_year, end_year):
 
 # calculate the df stats
 for land_type, df in df_dict.items():
-    df['water_loss'] = 100 * df['total_sub'] / df['uebPrec']
+    if ueb_adj:
+        df['water_loss'] = 100 * df['total_sub'] / (df['total_sub'] + df['ueb_rmlt'])
+    else:
+        df['water_loss'] = 100 * df['total_sub'] / df['uebPrec']
     year_index = df.index
     df.ix['sum'] = df.ix[year_index].sum()
     df.ix['mean'] = df.ix[year_index].mean()
@@ -112,8 +115,16 @@ for land_type, df in df_dict.items():
     df.to_csv(os.path.join(stats_folder, '{}_df.csv'.format(land_type)))
 
 # make bar plot
-prec = [df_dict['forest'].ix['mean']['uebPrec'], df_dict['open'].ix['mean']['uebPrec']]
-total_prec_err = [df_dict['forest'].ix['sem']['uebPrec'], df_dict['open'].ix['sem']['uebPrec']]
+if not ueb_adj:
+    prec = [df_dict['forest'].ix['mean']['uebPrec'],
+            df_dict['open'].ix['mean']['uebPrec']]
+    total_prec_err = [df_dict['forest'].ix['sem']['uebPrec'], df_dict['open'].ix['sem']['uebPrec']]
+else:
+    prec = [df_dict['forest'].ix['mean']['ueb_rmlt']+ df_dict['forest'].ix['mean']['total_sub'],
+            df_dict['open'].ix['mean']['ueb_rmlt'] + df_dict['open'].ix['mean']['total_sub']]
+    total_prec_err = [df_dict['forest'].ix['sem']['ueb_rmlt']+df_dict['forest'].ix['sem']['total_sub'],
+                      df_dict['open'].ix['sem']['ueb_rmlt']+df_dict['open'].ix['sem']['total_sub']]
+
 
 Ec = [df_dict['forest'].ix['mean']['ueb_Ec'], df_dict['open'].ix['mean']['ueb_Ec']]
 Es = [df_dict['forest'].ix['mean']['ueb_Es'], df_dict['open'].ix['mean']['ueb_Es']]
@@ -122,7 +133,10 @@ total_ET = [df_dict['forest'].ix['mean']['total_sub'], df_dict['open'].ix['mean'
 
 water_loss = []
 for land_type in ['forest', 'open']:
-    water_loss.append(round(100*df_dict[land_type].ix['mean']['total_sub'] / df_dict[land_type].ix['mean']['uebPrec'], 2))
+    if not ueb_adj:
+        water_loss.append(round(100*df_dict[land_type].ix['mean']['total_sub'] / df_dict[land_type].ix['mean']['uebPrec'], 2))
+    else:
+        water_loss.append(round(100 * df_dict[land_type].ix['mean']['total_sub'] / (df_dict[land_type].ix['mean']['ueb_rmlt']+df_dict[land_type].ix['mean']['total_sub']), 2))
 
 
 plt.figure(figsize=(8, 6))

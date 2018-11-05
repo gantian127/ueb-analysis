@@ -32,7 +32,6 @@ nlcd_type_dict = {
 }   # https://www.mrlc.gov/nlcd11_stat.php
 """
 
-
 import os
 import csv
 
@@ -42,14 +41,15 @@ import pandas as pd
 import gdalnumeric
 
 
-# user settings  ####################################################################################################
-watershed = 'McPhee'
+# user settings  ############################################################################
+watershed = 'Dillon'
 folder_name = '{}_sublimation_analysis'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 stats_folder = os.path.join(result_folder, 'stats_folder')
 
-terrain_folder = '/Projects/Tian_workspace/rdhm_ueb_modeling/McPhee_MPHC2/Sublimation_analysis/terrain/'
-dem_file = os.path.join(terrain_folder, 'McPhee_dem_watershed_clip.tif')
+ueb_adj = True
+terrain_folder = '/Projects/Tian_workspace/rdhm_ueb_modeling/Dillon/Sublimation_analysis/terrain/'
+dem_file = os.path.join(terrain_folder, 'Dillon_dem_watershed_clip.tif')
 lai_file = os.path.join(terrain_folder, 'ueb_lai.tif')
 cc_file = os.path.join(terrain_folder, 'ueb_cc.tif')
 aspect_file = os.path.join(terrain_folder, 'ueb_aspect.tif')
@@ -96,12 +96,17 @@ for var in var_dict.keys():
             mask_array = np.ma.array(var_sum_array, mask=mask)
             land_type_df[var].ix[index] = round(mask_array.mean(), 3)
 
-land_type_df['water_loss_cal'] = 100 * land_type_df['total_sub'] / land_type_df['uebPrec']
+if ueb_adj:
+    land_type_df['water_input'] = land_type_df['ueb_rmlt'] + land_type_df['total_sub']
+else:
+    land_type_df['water_input'] = land_type_df['uebPrec']
+
+land_type_df['water_loss_cal'] = 100 * land_type_df['total_sub'] / land_type_df['water_input']
 land_type_df.to_csv(os.path.join(stats_folder, 'land_type_df_new.csv'))
 
 # make bar plot for comparison
 fig, ax = plt.subplots(figsize=(10, 6))
-land_type_df[['uebPrec']].plot.bar(ax=ax, position=1, width=.2)
+land_type_df[['water_input']].plot.bar(ax=ax, position=1, width=.2)
 land_type_df[['ueb_Es', 'ueb_Ec']].plot.bar(ax=ax, position=0, width=.2, stacked=True, color=['orange', 'green'], rot=0)
 for x, y, water_loss in zip([0.0, 1.0], land_type_df['total_sub'], land_type_df['water_loss_cal']):
     ax.text(x, y+3,'{}%'.format(round(water_loss, 2)))

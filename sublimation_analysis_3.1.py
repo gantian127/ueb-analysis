@@ -26,7 +26,7 @@ from matplotlib import pyplot as plt
 from snow_cover_utility import array_to_raster
 
 # user settings ####################################################
-watershed = 'McPhee'
+watershed = 'Dillon'
 folder_name = '{}_sublimation_analysis'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 
@@ -37,6 +37,7 @@ dt = 6.0
 var_list = ['ueb_Ec', 'ueb_Es', 'uebPrec', 'ueb_tet', 'ueb_rmlt',
             'snow17_rmlt', 'snow17_tet', 'snow17_xmrg'] # this needs to be the same as the tif_df.csv column name
 
+ueb_adj = True  # whether df!=1
 get_annual_array = False
 calculate_total_sublimation = True  # calculate total sublimation and water loss
 domain_ave_plot = True  # make plot of to compare two models mass balance
@@ -136,8 +137,11 @@ if domain_ave_plot:
     data = annual_stats_df.round(2)
     for var in ['annual_mean']:
         prec = [data.ix['uebPrec'][var], data.ix['snow17_xmrg'][var]]
-        adj_prec = [0, round(data.ix['snow17_rmlt'][var] - data.ix['snow17_xmrg'][var], 2)]
-        total_prec_err = [data.ix['uebPrec']['sem'], data.ix['snow17_rmlt']['sem']]
+
+        adj_prec = [0 if not ueb_adj else round(data.ix['ueb_rmlt'][var]+data.ix['total_sub'][var]-data.ix['uebPrec'][var], 2),
+                    round(data.ix['snow17_rmlt'][var] - data.ix['snow17_xmrg'][var], 2)]
+        total_prec_err = [data.ix['uebPrec']['sem'] if not ueb_adj else data.ix['ueb_rmlt']['sem']+data.ix['total_sub']['sem'],
+                          data.ix['snow17_rmlt']['sem']]
 
         sub = [data.ix['total_sub'][var], 0]
         tet = [data.ix['ueb_tet'][var], data.ix['snow17_tet'][var]]
