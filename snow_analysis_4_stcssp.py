@@ -16,6 +16,9 @@ step:
   b) all years stats and plots: nse, fitness, scatter plot
   b) monthly stats and plots: fitness
   c) annual stats and plots:
+- calculate the modified NSE based on Dave's suggestion:
+  a) calculate the seasonal pattern: calculate the daily ave by using before and after 7 days of 22years and use the gaussion curve as weight
+  b) calculate the NSE of comparing (obs - seasonal pattern) and  (sim - seasonal pattern)
 
 findings:
 1) monthly: compare the monthly stats table and plots
@@ -51,7 +54,7 @@ import matplotlib.pyplot as plt
 
 # default user settings apply to all steps ####################################################
 # folders/files created by step 2 script
-watershed = 'DIRC2'
+watershed = 'MPHC2'
 folder_name = '{}_snow_analysis_result'.format(watershed)
 result_folder = os.path.join(os.getcwd(), folder_name)
 model_snow_date_path = os.path.join(result_folder, 'model_snow_date.csv')
@@ -304,5 +307,19 @@ for model in ['snow17', 'ueb']:
         ax.set_xticklabels(year_list)
         ax.set_title('Box plot of percent snow in each water year for Modis observation'.format(model))
         fig.savefig(os.path.join(stats_folder, 'annual_snow_cover_{}.png'.format(model)))
+
+
+        # #calculate modified NSE stats  ################################################################
+        # day_ave = pixel_count['modis_percent_snow'].groupby(pixel_count.index.dayofyear).mean()
+        # day_ave_rolling = day_ave.rolling(window=14, win_type='gaussian', min_periods=1, center=True).mean(std=1)
+        # pixel_count['day_of_year'] = pixel_count.index.dayofyear
+        #
+        # def get_difference(row, col_name, day_ave_rolling):
+        #     return row[col_name] - day_ave_rolling[row['day_of_year']]
+        #
+        # pixel_count['modis_diff'] = pixel_count.apply(get_difference, args=('modis_percent_snow', day_ave_rolling),axis=1)
+        # pixel_count['swe_diff'] = pixel_count.apply(get_difference, args=('swe_percent_snow', day_ave_rolling), axis=1)
+        # modis_diff_mean = pixel_count['modis_diff'].mean()
+        # modified_nse = 1 - sum(np.power((pixel_count.modis_diff - pixel_count.swe_diff), 2)) / sum(np.power((pixel_count.modis_diff - modis_diff_mean), 2))
 
 print 'snow_analysis_4: stats calculation is done'
