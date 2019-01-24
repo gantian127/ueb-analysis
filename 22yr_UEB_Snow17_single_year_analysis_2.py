@@ -29,6 +29,9 @@ watershed_area = 2117470000
 snow17_dir = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\snow17_best\{}'.format(watershed)
 ueb_dir = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\s8_ueb_cali_utcoffset_final_best\{}'.format(watershed)
 obs_discharge_path = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\QME_MPHC2L_F.QME'
+snow_ylim = 350
+discharge_ylim = 150
+
 
 # # # Dillon
 # watershed = 'DIRC2'
@@ -36,6 +39,9 @@ obs_discharge_path = r'D:\Research_Data\2_Mcphee\Mcphee_scenarios\QME_MPHC2L_F.Q
 # snow17_dir = r'D:\Research_Data\3_Dillon\Calibration\snow17_best_cali\{}'.format(watershed)
 # ueb_dir = r'D:\Research_Data\3_Dillon\Calibration\ueb_best_cali\{}'.format(watershed)
 # obs_discharge_path = r'D:\Research_Data\3_Dillon\obs_discharge\QME_DIRC2L_F.QME'
+# snow_ylim = 350
+# discharge_ylim = 100
+
 
 snow17_skip = 136
 ueb_skip = 121
@@ -61,6 +67,7 @@ if os.path.isdir(snow17_dir):
 
 obs_df = get_obs_dataframe(obs_discharge_path)
 
+
 # step2 get plots for each water year
 def get_discharge_stats(obs, sim):
     nse = 1 - sum(np.power((obs - sim), 2)) / sum(np.power((obs - obs.mean()), 2))
@@ -68,17 +75,20 @@ def get_discharge_stats(obs, sim):
     rmse = np.sqrt(np.mean(np.power((obs - sim), 2)))
     return {'nse': nse, 'bias': bias, 'rmse': rmse}
 
-fig, ax_list = plt.subplots(len(water_year_list), 1, figsize=(13, 4*len(water_year_list)))
-# plt.tight_layout()
+fig, ax_list = plt.subplots(len(water_year_list), 2, figsize=(20, 5*len(water_year_list)))
 
-
-for index, water_year, ax in zip(['a', 'b', 'c', 'd'], water_year_list, ax_list):
+for indexs, water_year, axis in zip([('a','b'), ('c','d'), ('e','f'), ('g','h')], water_year_list, ax_list):
     start_time = '{}-10-01'.format(water_year-1)
     end_time = '{}-10-01'.format(water_year)
+    ax, ax1 = axis
+    index, index1 = indexs
 
     # get discharge df
     ueb_data = ueb_df[(ueb_df.index >= start_time) & (ueb_df.index < end_time)]
+    ueb_data['ueb_swe_total'] = ueb_data['ueb_SWE'] + ueb_data['ueb_Wc']
     snow17_data = snow17_df[(snow17_df.index >= start_time) & (snow17_df.index < end_time)]
+    snow17_data['snow17_swe_total'] = snow17_data['snow17_liqw'] + snow17_data['snow17_we']
+    plot_df = pd.concat([ueb_data, snow17_data], axis=1)
 
     ueb_discharge = ueb_data.groupby(pd.Grouper(freq='D'))['ueb_discharge'].mean()
     snow17_discharge = snow17_data.groupby(pd.Grouper(freq='D'))['snow17_discharge'].mean()
@@ -99,21 +109,18 @@ for index, water_year, ax in zip(['a', 'b', 'c', 'd'], water_year_list, ax_list)
                       ax=ax,
                       )
     handles, labels = ax.get_legend_handles_labels()
-    ax.set_ylim([0.0, 150])
-    if ax == ax_list[0]:
+    ax.set_ylim([0.0, discharge_ylim])
+    if ax == ax_list[0][0]:
         ax.legend(handles, ['UEB', 'SNOW-17', 'Obs'])
     else:
         ax.get_legend().remove()
 
     text = '({})\n\n'.format(index)
-    # for model, stat_dict in stat.items():
-    #     text += '{}\n' \
-    #             'rmse: {} cms\n' \
-    #             'nse: {}\n' \
-    #             'bias: {} cms\n\n'.format(model, round(stat_dict['rmse'], 2), round(stat_dict['nse'], 2), round(stat_dict['bias'], 2))
+    ax.text(0.02, 0.7, text, transform=ax.transAxes, size=13)
+
+    text = 'NSE\n'
     for model, stat_dict in stat.items():
-        text += '{}\n' \
-                'NSE: {}\n\n'.format( model, round(stat_dict['nse'], 2))
+        text += '{}: {}\n'.format(model, round(stat_dict['nse'], 2))
     ax.text(0.02, 0.3, text, transform=ax.transAxes, size=13)
     ax.xaxis.set_major_locator(mdates.MonthLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
@@ -121,5 +128,24 @@ for index, water_year, ax in zip(['a', 'b', 'c', 'd'], water_year_list, ax_list)
     ax.set_xlabel('WY {}'.format(water_year))
     ax.set_ylabel('discharge (cms)')
 
+    # swe compare
+    plot_df.plot(y=['ueb_swe_total', 'snow17_swe_total'],
+                 ax=ax1)
+    if ax1 == ax_list[0][1]:
+        ax1.legend(handles, ['UEB', 'SNOW-17'])
+    else:
+        ax1.get_legend().remove()
+
+    ax1.set_xlabel('WY {}'.format(water_year))
+    ax1.set_ylabel('SWE(mm)')
+    ax1.set_ylim([0.0, snow_ylim])
+    ax1.xaxis.set_major_locator(mdates.MonthLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+    ax1.tick_params(axis='x', rotation=0)
+
+    text = '({})\n\n'.format(index1)
+    ax1.text(0.02, 0.7, text, transform=ax1.transAxes, size=13)
+    plt.xticks(horizontalalignment="center")
+
 plt.tight_layout()
-fig.savefig(os.path.join(result_dir, 'discharge_combine.png'))
+fig.savefig(os.path.join(result_dir, 'discharge_combine.png'), dpi=300)
